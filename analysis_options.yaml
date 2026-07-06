@@ -1,0 +1,14 @@
+# Static analysis for FieldChat. Strict lint and type rules via
+# very_good_analysis; see https://pub.dev/packages/very_good_analysis.
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    # This is an application, not a published library. Documenting every
+    # widget field is noise; intent lives in names and short why-comments.
+    public_member_api_docs: false

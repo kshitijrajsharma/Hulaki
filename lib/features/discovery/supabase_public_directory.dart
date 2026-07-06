@@ -1,0 +1,151 @@
+import 'dart:convert';
+import 'dart:math' as math;
+
+import 'package:fieldchat/features/discovery/public_directory.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// The production public directory. Proximity search uses a bounding box on the
+/// indexed lat/lng columns, then refines by true distance.
+class SupabasePublicDirectory implements PublicDirectory {
+  SupabasePublicDirectory(this._client);
+
+  final SupabaseClient _client;
+  static const _table = 'public_groups';
+  static const _requestsTable = 'join_requests';
+
+  @override
+  Future<void> publish(PublicGroup group) async {
+    await _client.from(_table).upsert({
+      'group_id': group.groupId,
+      'name': group.name,
+      'description': group.description,
+      'center_lat': group.centerLat,
+      'center_lng': group.centerLng,
+      'enc_key': group.encKey,
+      'photo': group.photo == null ? null : base64Encode(group.photo!),
+      'tags': group.tags.map((t) => t.toJson()).toList(),
+      'mapper_count': group.mapperCount,
+      'aoi': group.aoiGeoJson,
+      'join_approval': group.joinApproval,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> requestJoin(JoinRequest request) async {
+    await _client.from(_requestsTable).upsert({
+      'id': request.id,
+      'group_id': request.groupId,
+      'requester_id': request.requesterId,
+      'requester_name': request.requesterName,
+      'signing_key': request.signingKey,
+      'agreement_key': request.agreementKey,
+    }, onConflict: 'group_id,requester_id');
+  }
+
+  @override
+  Future<List<JoinRequest>> pendingRequests(String groupId) async {
+    final rows = await _client
+        .from(_requestsTable)
+        .select()
+        .eq('group_id', groupId)
+        .isFilter('sealed_key', null);
+    return [for (final row in rows) _requestFromRow(row)];
+  }
+
+  @override
+  Future<JoinRequest?> myRequest(String groupId, String requesterId) async {
+    final row = await _client
+        .from(_requestsTable)
+        .select()
+        .eq('group_id', groupId)
+        .eq('requester_id', requesterId)
+        .maybeSingle();
+    return row == null ? null : _requestFromRow(row);
+  }
+
+  @override
+  Future<void> approveRequest(String requestId, String sealedKey) async {
+    await _client
+        .from(_requestsTable)
+        .update({'sealed_key': sealedKey})
+        .eq('id', requestId);
+  }
+
+  @override
+  Future<void> declineRequest(String requestId) async {
+    await _client.from(_requestsTable).delete().eq('id', requestId);
+  }
+
+  JoinRequest _requestFromRow(Map<String, dynamic> row) => JoinRequest(
+    id: row['id'] as String,
+    groupId: row['group_id'] as String,
+    requesterId: row['requester_id'] as String,
+    requesterName: row['requester_name'] as String?,
+    signingKey: row['signing_key'] as String,
+    agreementKey: row['agreement_key'] as String,
+    sealedKey: row['sealed_key'] as String?,
+  );
+
+  @override
+  Future<void> remove(String groupId) async {
+    await _client.from(_table).delete().eq('group_id', groupId);
+  }
+
+  @override
+  Future<List<PublicGroup>> nearby({
+    required double lat,
+    required double lng,
+    double radiusKm = 25,
+  }) async {
+    final deltaLat = radiusKm / 111.0;
+    final deltaLng = radiusKm / (111.0 * math.cos(lat * math.pi / 180));
+    final rows = await _client
+        .from(_table)
+        .select()
+        .gte('center_lat', lat - deltaLat)
+        .lte('center_lat', lat + deltaLat)
+        .gte('center_lng', lng - deltaLng)
+        .lte('center_lng', lng + deltaLng);
+
+    final radiusM = radiusKm * 1000;
+    final results = <PublicGroup>[];
+    for (final row in rows) {
+      final centerLat = (row['center_lat'] as num).toDouble();
+      final centerLng = (row['center_lng'] as num).toDouble();
+      final meters = Geolocator.distanceBetween(
+        lat,
+        lng,
+        centerLat,
+        centerLng,
+      );
+      if (meters > radiusM) continue;
+      final photo = row['photo'] as String?;
+      final tags = row['tags'] as List<dynamic>?;
+      results.add(
+        PublicGroup(
+          groupId: row['group_id'] as String,
+          name: row['name'] as String,
+          description: row['description'] as String?,
+          centerLat: centerLat,
+          centerLng: centerLng,
+          encKey: row['enc_key'] as String,
+          photo: photo == null ? null : base64Decode(photo),
+          tags: tags == null
+              ? const []
+              : [
+                  for (final tag in tags)
+                    DirectoryTag.fromJson(tag as Map<String, dynamic>),
+                ],
+          mapperCount: (row['mapper_count'] as num?)?.toInt() ?? 0,
+          aoiGeoJson: row['aoi'] as String?,
+          joinApproval: row['join_approval'] as bool? ?? false,
+          distanceM: meters,
+        ),
+      );
+    }
+    results.sort((a, b) => a.distanceM!.compareTo(b.distanceM!));
+    return results;
+  }
+}
