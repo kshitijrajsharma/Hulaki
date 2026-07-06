@@ -14,6 +14,7 @@ import 'package:fieldchat/features/settings/units.dart';
 import 'package:fieldchat/features/settings/units_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// The account tab: who you are, the areas saved for offline use, and the
 /// project's support link.
@@ -36,6 +37,22 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   Future<void> _remove(int id) async {
     await removeCachedRegion(id);
     _reloadAreas();
+  }
+
+  static final Uri _supportUri = Uri.parse(
+    'https://github.com/sponsors/kshitijrajsharma',
+  );
+
+  Future<void> _openSupport() async {
+    final ok = await launchUrl(
+      _supportUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the link')),
+      );
+    }
   }
 
   /// The size-and-expiry line under a saved area, for example "12.4 MB ·
@@ -185,6 +202,47 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             ),
           ),
           const _ArchivedGroups(),
+          const SizedBox(height: AppSpacing.xl),
+          const _SectionLabel('SUPPORT'),
+          const SizedBox(height: AppSpacing.sm),
+          _Card(
+            child: InkWell(
+              onTap: _openSupport,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.favorite_outline,
+                    color: AppColors.danger,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Support the developer',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Star or sponsor the project on GitHub.',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.open_in_new,
+                    size: 18,
+                    color: AppColors.textMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: AppSpacing.xl),
           Center(
             child: Column(

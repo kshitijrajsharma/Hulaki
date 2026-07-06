@@ -1,6 +1,7 @@
 import 'package:fieldchat/app/app_shell.dart';
 import 'package:fieldchat/app/background_service_watcher.dart';
 import 'package:fieldchat/app/connectivity_watcher.dart';
+import 'package:fieldchat/app/deep_link_watcher.dart';
 import 'package:fieldchat/features/auth/application/auth_providers.dart';
 import 'package:fieldchat/features/auth/application/auth_state.dart';
 import 'package:fieldchat/features/auth/presentation/username_screen.dart';
@@ -20,7 +21,9 @@ class AuthGate extends ConsumerWidget {
       AuthLoading() => const SplashScreen(),
       AuthSignedOut() => const UsernameScreen(),
       AuthSignedIn() => const ConnectivityWatcher(
-        child: BackgroundServiceWatcher(child: AppShell()),
+        child: BackgroundServiceWatcher(
+          child: DeepLinkWatcher(child: AppShell()),
+        ),
       ),
     };
   }

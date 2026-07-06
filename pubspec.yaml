@@ -29,6 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   # Cupertino icons for iOS-style glyphs.
+  app_links: ^7.2.0
   archive: ^4.0.9
   connectivity_plus: ^7.2.0
   cryptography: ^2.9.0

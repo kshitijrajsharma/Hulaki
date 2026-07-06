@@ -54,8 +54,10 @@ final liveLocationSourceProvider = Provider<LiveLocationSource>(
 );
 
 /// The device's live location, driving the GPS strip and detail sheet. Starts
-/// in loading until the first fix arrives.
-final liveLocationProvider = StreamProvider<LiveLocation>(
+/// in loading until the first fix arrives. Auto-disposed so continuous GPS runs
+/// only while a screen (or the background service) is actively using it.
+// ignore: specify_nonobvious_property_types
+final liveLocationProvider = StreamProvider.autoDispose<LiveLocation>(
   (ref) => ref.watch(liveLocationSourceProvider).watch(),
 );
 

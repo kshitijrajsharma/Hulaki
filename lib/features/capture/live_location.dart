@@ -29,15 +29,17 @@ abstract interface class LiveLocationSource {
 }
 
 /// Real device location. Requests permission on first listen, then emits every
-/// fix as the device moves.
+/// fix the platform reports.
 class GeolocatorLiveLocationSource implements LiveLocationSource {
   const GeolocatorLiveLocationSource();
 
   @override
   Stream<LiveLocation> watch() async* {
     if (!await ensureLocationPermission()) return;
+    // No distance filter, so the reading keeps refreshing while stationary and
+    // its accuracy stays current instead of freezing until the next move.
     await for (final position in Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(distanceFilter: 2),
+      locationSettings: const LocationSettings(),
     )) {
       yield LiveLocation(
         lat: position.latitude,

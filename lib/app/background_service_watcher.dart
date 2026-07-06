@@ -27,6 +27,7 @@ class BackgroundServiceWatcher extends ConsumerStatefulWidget {
 class _BackgroundServiceWatcherState
     extends ConsumerState<BackgroundServiceWatcher> {
   bool _running = false;
+  ProviderSubscription<AsyncValue<LiveLocation>>? _locationSub;
 
   @override
   void initState() {
@@ -37,33 +38,38 @@ class _BackgroundServiceWatcherState
     });
   }
 
+  @override
+  void dispose() {
+    _locationSub?.close();
+    super.dispose();
+  }
+
   Future<void> _apply(bool enabled) async {
     final service = ref.read(backgroundLocationServiceProvider);
     if (enabled && !_running) {
       _running = true;
+      // Feed the live accuracy to the notification only while running, so this
+      // watcher does not keep the location stream alive the rest of the time.
+      _locationSub = ref.listenManual(liveLocationProvider, (_, next) {
+        final location = next.asData?.value;
+        if (location != null) {
+          unawaited(service.reportAccuracy(location.accuracyM));
+        }
+      });
       await service.start();
     } else if (!enabled && _running) {
       _running = false;
+      _locationSub?.close();
+      _locationSub = null;
       await service.stop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    ref
-      ..listen<bool>(backgroundRunProvider, (_, enabled) {
-        unawaited(_apply(enabled));
-      })
-      ..listen<AsyncValue<LiveLocation>>(liveLocationProvider, (_, next) {
-        final location = next.asData?.value;
-        if (_running && location != null) {
-          unawaited(
-            ref
-                .read(backgroundLocationServiceProvider)
-                .reportAccuracy(location.accuracyM),
-          );
-        }
-      });
+    ref.listen<bool>(backgroundRunProvider, (_, enabled) {
+      unawaited(_apply(enabled));
+    });
     return widget.child;
   }
 }

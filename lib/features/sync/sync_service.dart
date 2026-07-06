@@ -108,9 +108,8 @@ class SyncService {
   }
 
   /// Re-fetches a group's whole history from the start and re-ingests it,
-  /// reconciling any hole left by an earlier sync that advanced the cursor past
-  /// messages it never stored. Ingest is idempotent, so this adds only what is
-  /// missing. Used by the manual refresh in a thread.
+  /// reconciling any hole left when the cursor advanced past messages that were
+  /// never stored. Ingest is idempotent, so this adds only what is missing.
   Future<void> resync(String groupId) async {
     _markSyncing(groupId, active: true);
     try {

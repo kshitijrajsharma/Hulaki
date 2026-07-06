@@ -33,13 +33,27 @@ enum _RequestState { none, requesting, pending, joining }
 
 class _GroupPreviewScreenState extends ConsumerState<GroupPreviewScreen> {
   bool _joining = false;
+  bool _alreadyMember = false;
   _RequestState _request = _RequestState.none;
   Timer? _poll;
 
   @override
   void initState() {
     super.initState();
-    if (widget.group.joinApproval) unawaited(_checkExistingRequest());
+    unawaited(_init());
+  }
+
+  /// A group already in the local store is one this device created or joined,
+  /// so it opens directly instead of offering to join or request.
+  Future<void> _init() async {
+    final existing = await ref
+        .read(databaseProvider)
+        .groupById(widget.group.groupId);
+    if (existing != null) {
+      if (mounted) setState(() => _alreadyMember = true);
+      return;
+    }
+    if (widget.group.joinApproval) await _checkExistingRequest();
   }
 
   @override
@@ -231,7 +245,9 @@ class _GroupPreviewScreenState extends ConsumerState<GroupPreviewScreen> {
             ),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),
-              child: group.joinApproval ? _approvalButton() : _openButton(),
+              child: _alreadyMember
+                  ? _memberButton()
+                  : (group.joinApproval ? _approvalButton() : _openButton()),
             ),
           ],
         ),
@@ -242,6 +258,13 @@ class _GroupPreviewScreenState extends ConsumerState<GroupPreviewScreen> {
   Widget _openButton() => PrimaryButton(
     label: _joining ? 'Joining…' : 'Join group',
     onPressed: _joining ? null : () => unawaited(_join()),
+  );
+
+  /// Shown for a group this device already belongs to, including your own.
+  Widget _memberButton() => PrimaryButton(
+    label: 'Open',
+    onPressed: () =>
+        unawaited(_openThread(widget.group.groupId, widget.group.name)),
   );
 
   Widget _approvalButton() {
