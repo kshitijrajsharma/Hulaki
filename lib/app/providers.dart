@@ -154,3 +154,14 @@ final groupMembersProvider =
     StreamProvider.family<List<GroupMemberView>, String>(
       (ref, groupId) => ref.watch(databaseProvider).watchMembersFor(groupId),
     );
+
+/// Whether this device is a verified admin of the group, derived from the
+/// roster. False until the roster loads. Gates admin-only controls.
+// ignore: specify_nonobvious_property_types
+final isGroupAdminProvider = Provider.family<bool, String>((ref, groupId) {
+  final members =
+      ref.watch(groupMembersProvider(groupId)).asData?.value ??
+      const <GroupMemberView>[];
+  final selfId = ref.watch(currentUserIdProvider);
+  return members.any((m) => m.profileId == selfId && m.isAdmin);
+});

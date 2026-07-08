@@ -121,31 +121,50 @@ class SupabasePublicDirectory implements PublicDirectory {
         centerLng,
       );
       if (meters > radiusM) continue;
-      final photo = row['photo'] as String?;
-      final tags = row['tags'] as List<dynamic>?;
-      results.add(
-        PublicGroup(
-          groupId: row['group_id'] as String,
-          name: row['name'] as String,
-          description: row['description'] as String?,
-          centerLat: centerLat,
-          centerLng: centerLng,
-          encKey: row['enc_key'] as String,
-          photo: photo == null ? null : base64Decode(photo),
-          tags: tags == null
-              ? const []
-              : [
-                  for (final tag in tags)
-                    DirectoryTag.fromJson(tag as Map<String, dynamic>),
-                ],
-          mapperCount: (row['mapper_count'] as num?)?.toInt() ?? 0,
-          aoiGeoJson: row['aoi'] as String?,
-          joinApproval: row['join_approval'] as bool? ?? false,
-          distanceM: meters,
-        ),
-      );
+      results.add(_groupFromRow(row, distanceM: meters));
     }
     results.sort((a, b) => a.distanceM!.compareTo(b.distanceM!));
     return results;
+  }
+
+  @override
+  Future<List<PublicGroup>> searchByName(String query) async {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return const [];
+    // Escape LIKE wildcards so the text matches literally, not as a pattern.
+    final escaped = normalized.replaceAllMapped(
+      RegExp(r'[%_\\]'),
+      (match) => '\\${match[0]}',
+    );
+    final rows = await _client
+        .from(_table)
+        .select()
+        .ilike('name', '%$escaped%')
+        .limit(50);
+    return [for (final row in rows) _groupFromRow(row)];
+  }
+
+  PublicGroup _groupFromRow(Map<String, dynamic> row, {double? distanceM}) {
+    final photo = row['photo'] as String?;
+    final tags = row['tags'] as List<dynamic>?;
+    return PublicGroup(
+      groupId: row['group_id'] as String,
+      name: row['name'] as String,
+      description: row['description'] as String?,
+      centerLat: (row['center_lat'] as num).toDouble(),
+      centerLng: (row['center_lng'] as num).toDouble(),
+      encKey: row['enc_key'] as String,
+      photo: photo == null ? null : base64Decode(photo),
+      tags: tags == null
+          ? const []
+          : [
+              for (final tag in tags)
+                DirectoryTag.fromJson(tag as Map<String, dynamic>),
+            ],
+      mapperCount: (row['mapper_count'] as num?)?.toInt() ?? 0,
+      aoiGeoJson: row['aoi'] as String?,
+      joinApproval: row['join_approval'] as bool? ?? false,
+      distanceM: distanceM,
+    );
   }
 }

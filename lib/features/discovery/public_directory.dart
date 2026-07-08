@@ -125,6 +125,10 @@ abstract interface class PublicDirectory {
     double radiusKm,
   });
 
+  /// Groups whose name contains [query] (case-insensitive), for finding a group
+  /// by name beyond the nearby radius. Empty when [query] is blank.
+  Future<List<PublicGroup>> searchByName(String query);
+
   /// Files a request to join an approval-gated group.
   Future<void> requestJoin(JoinRequest request);
 
@@ -217,5 +221,17 @@ class InMemoryPublicDirectory implements PublicDirectory {
     }
     withDistance.sort((a, b) => a.distanceM!.compareTo(b.distanceM!));
     return withDistance;
+  }
+
+  @override
+  Future<List<PublicGroup>> searchByName(String query) async {
+    final normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) return const [];
+    return [
+      for (final group in _entries.values)
+        if (group.name.toLowerCase().contains(normalized)) group,
+    ]..sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
   }
 }

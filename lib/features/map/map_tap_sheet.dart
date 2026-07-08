@@ -7,11 +7,13 @@ import 'package:flutter/material.dart';
 
 /// Sheet for a tap on an empty map spot: place a point here (staged into the
 /// composer) or hand the spot to an external navigation app. Returns true when
-/// the user chose to add an observation.
+/// the user chose to add an observation. When [canPlace] is false the add
+/// action is withheld, so only navigation is offered.
 Future<bool> showMapTapSheet({
   required BuildContext context,
   required double lat,
   required double lng,
+  bool canPlace = true,
 }) async {
   final chose = await showModalBottomSheet<bool>(
     context: context,
@@ -59,6 +61,14 @@ Future<bool> showMapTapSheet({
                 ),
               ],
             ),
+            if (!canPlace) ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Only admins can place points in this group. Send your live '
+                'GPS point from the chat instead.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
@@ -74,14 +84,19 @@ Future<bool> showMapTapSheet({
                     label: const Text('Navigate here'),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () => Navigator.of(sheetContext).pop(true),
-                    icon: const Icon(Icons.add_location_alt_outlined, size: 16),
-                    label: const Text('Add here'),
+                if (canPlace) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.of(sheetContext).pop(true),
+                      icon: const Icon(
+                        Icons.add_location_alt_outlined,
+                        size: 16,
+                      ),
+                      label: const Text('Add here'),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ],

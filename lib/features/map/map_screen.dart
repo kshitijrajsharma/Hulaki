@@ -80,6 +80,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _styledOnce = false;
   bool _satellite = false;
   String? _aoiGeoJson;
+  bool _canPlace = true;
   bool _outsideAoi = false;
   bool _aoiInView = false;
   LatLng? _lastLocation;
@@ -256,6 +257,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final group = await ref.read(databaseProvider).groupById(widget.groupId);
     final aoi = group?.aoiGeoJson;
     _aoiGeoJson = aoi;
+    _canPlace =
+        (group?.allowMemberPlace ?? true) ||
+        ref.read(isGroupAdminProvider(widget.groupId));
     if (aoi != null) {
       await controller.addGeoJsonSource(
         'aoi',
@@ -417,6 +421,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       context: context,
       lat: coordinates.latitude,
       lng: coordinates.longitude,
+      canPlace: _canPlace,
     );
     if (!mounted) return;
     if (!add) {

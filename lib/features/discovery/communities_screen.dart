@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:fieldchat/app/providers.dart';
 import 'package:fieldchat/design/app_colors.dart';
 import 'package:fieldchat/design/app_spacing.dart';
+import 'package:fieldchat/features/capture/live_location.dart';
 import 'package:fieldchat/features/discovery/group_preview_screen.dart';
 import 'package:fieldchat/features/discovery/place_line.dart';
 import 'package:fieldchat/features/discovery/public_directory.dart';
@@ -20,12 +23,39 @@ class CommunitiesScreen extends ConsumerStatefulWidget {
 }
 
 class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
+  final _searchController = TextEditingController();
   Future<List<PublicGroup>>? _future;
+  Future<List<PublicGroup>>? _searchFuture;
+  Timer? _debounce;
+  String _query = '';
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _load(double lat, double lng) {
     _future = ref
         .read(publicDirectoryProvider)
         .nearby(lat: lat, lng: lng, radiusKm: 25);
+  }
+
+  /// Debounces typing, then searches the directory by name. A blank query
+  /// falls back to the nearby list.
+  void _onQueryChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final query = value.trim();
+      setState(() {
+        _query = query;
+        _searchFuture = query.isEmpty
+            ? null
+            : ref.read(publicDirectoryProvider).searchByName(query);
+      });
+    });
   }
 
   @override
@@ -44,37 +74,118 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
       ),
-      body: live == null
-          ? const _Centered('Finding your location…', spinner: true)
-          : RefreshIndicator(
-              onRefresh: () async {
-                setState(() => _load(live.lat, live.lng));
-                await _future;
-              },
-              child: FutureBuilder<List<PublicGroup>>(
-                future: _future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const _Centered('Looking nearby…', spinner: true);
-                  }
-                  final groups = snapshot.data ?? const <PublicGroup>[];
-                  if (groups.isEmpty) {
-                    return const _Centered(
-                      'No public groups nearby yet. Start one and make it '
-                      'public to put it on the map.',
-                    );
-                  }
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: groups.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, i) =>
-                        _NearbyTile(group: groups[i], units: units),
-                  );
-                },
-              ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.xs,
             ),
+            child: _SearchField(
+              controller: _searchController,
+              onChanged: _onQueryChanged,
+            ),
+          ),
+          Expanded(
+            child: _query.isEmpty
+                ? _nearbySection(live, units)
+                : _searchSection(units),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _nearbySection(LiveLocation? live, UnitSystem units) {
+    if (live == null) {
+      return const _Centered('Finding your location…', spinner: true);
+    }
+    return RefreshIndicator(
+      onRefresh: () async {
+        setState(() => _load(live.lat, live.lng));
+        await _future;
+      },
+      child: FutureBuilder<List<PublicGroup>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const _Centered('Looking nearby…', spinner: true);
+          }
+          final groups = snapshot.data ?? const <PublicGroup>[];
+          if (groups.isEmpty) {
+            return const _Centered(
+              'No public groups nearby yet. Start one and make it '
+              'public to put it on the map.',
+            );
+          }
+          return _GroupList(groups: groups, units: units);
+        },
+      ),
+    );
+  }
+
+  Widget _searchSection(UnitSystem units) {
+    return FutureBuilder<List<PublicGroup>>(
+      future: _searchFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _Centered('Searching…', spinner: true);
+        }
+        final groups = snapshot.data ?? const <PublicGroup>[];
+        if (groups.isEmpty) {
+          return _Centered('No public groups match "$_query".');
+        }
+        return _GroupList(groups: groups, units: units);
+      },
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      autocorrect: false,
+      textInputAction: TextInputAction.search,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: 'Search communities by name',
+        prefixIcon: const Icon(Icons.search, size: 20),
+        isDense: true,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.field),
+          borderSide: const BorderSide(color: AppColors.mist),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.field),
+          borderSide: const BorderSide(color: AppColors.ink, width: 2),
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupList extends StatelessWidget {
+  const _GroupList({required this.groups, required this.units});
+
+  final List<PublicGroup> groups;
+  final UnitSystem units;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      itemCount: groups.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      itemBuilder: (context, i) => _NearbyTile(group: groups[i], units: units),
     );
   }
 }

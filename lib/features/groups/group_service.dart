@@ -219,6 +219,10 @@ class GroupService {
         'aoiGeoJson': group.aoiGeoJson,
         'isPublic': group.isPublic,
         'joinApproval': group.joinApproval,
+        'allowMemberExport': group.allowMemberExport,
+        'allowMemberPlace': group.allowMemberPlace,
+        'allowOutsideArea': group.allowOutsideArea,
+        'gpsLimitM': group.gpsLimitM,
         'adminRootKey': group.adminRootKey,
         'creatorName': self?.displayName,
         'creatorAgreementKey': self?.agreementKey,
@@ -428,6 +432,50 @@ class GroupService {
   Future<void> setJoinApproval(String groupId, {required bool value}) async {
     await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
       GroupsCompanion(joinApproval: Value(value)),
+    );
+    await _publishFullMeta(groupId);
+  }
+
+  /// Toggles whether non-admins may export the group's data, and republishes.
+  Future<void> setAllowMemberExport(
+    String groupId, {
+    required bool value,
+  }) async {
+    await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
+      GroupsCompanion(allowMemberExport: Value(value)),
+    );
+    await _publishFullMeta(groupId);
+  }
+
+  /// Toggles whether non-admins may place points by tapping the map, and
+  /// republishes. When off they can still send their live GPS point.
+  Future<void> setAllowMemberPlace(
+    String groupId, {
+    required bool value,
+  }) async {
+    await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
+      GroupsCompanion(allowMemberPlace: Value(value)),
+    );
+    await _publishFullMeta(groupId);
+  }
+
+  /// Toggles whether points may be sent from outside the task area, and
+  /// republishes.
+  Future<void> setAllowOutsideArea(
+    String groupId, {
+    required bool value,
+  }) async {
+    await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
+      GroupsCompanion(allowOutsideArea: Value(value)),
+    );
+    await _publishFullMeta(groupId);
+  }
+
+  /// Sets the accuracy cap (metres) a sent fix may carry, null to remove it,
+  /// and republishes.
+  Future<void> setGpsLimit(String groupId, int? meters) async {
+    await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
+      GroupsCompanion(gpsLimitM: Value(meters)),
     );
     await _publishFullMeta(groupId);
   }

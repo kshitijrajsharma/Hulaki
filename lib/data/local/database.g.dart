@@ -529,6 +529,62 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _allowMemberExportMeta = const VerificationMeta(
+    'allowMemberExport',
+  );
+  @override
+  late final GeneratedColumn<bool> allowMemberExport = GeneratedColumn<bool>(
+    'allow_member_export',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("allow_member_export" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _allowMemberPlaceMeta = const VerificationMeta(
+    'allowMemberPlace',
+  );
+  @override
+  late final GeneratedColumn<bool> allowMemberPlace = GeneratedColumn<bool>(
+    'allow_member_place',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("allow_member_place" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _allowOutsideAreaMeta = const VerificationMeta(
+    'allowOutsideArea',
+  );
+  @override
+  late final GeneratedColumn<bool> allowOutsideArea = GeneratedColumn<bool>(
+    'allow_outside_area',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("allow_outside_area" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _gpsLimitMMeta = const VerificationMeta(
+    'gpsLimitM',
+  );
+  @override
+  late final GeneratedColumn<int> gpsLimitM = GeneratedColumn<int>(
+    'gps_limit_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _photoMeta = const VerificationMeta('photo');
   @override
   late final GeneratedColumn<Uint8List> photo = GeneratedColumn<Uint8List>(
@@ -572,6 +628,10 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     isPublic,
     joinApproval,
     adminRootKey,
+    allowMemberExport,
+    allowMemberPlace,
+    allowOutsideArea,
+    gpsLimitM,
     photo,
     createdAt,
     archivedAt,
@@ -659,6 +719,39 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         ),
       );
     }
+    if (data.containsKey('allow_member_export')) {
+      context.handle(
+        _allowMemberExportMeta,
+        allowMemberExport.isAcceptableOrUnknown(
+          data['allow_member_export']!,
+          _allowMemberExportMeta,
+        ),
+      );
+    }
+    if (data.containsKey('allow_member_place')) {
+      context.handle(
+        _allowMemberPlaceMeta,
+        allowMemberPlace.isAcceptableOrUnknown(
+          data['allow_member_place']!,
+          _allowMemberPlaceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('allow_outside_area')) {
+      context.handle(
+        _allowOutsideAreaMeta,
+        allowOutsideArea.isAcceptableOrUnknown(
+          data['allow_outside_area']!,
+          _allowOutsideAreaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('gps_limit_m')) {
+      context.handle(
+        _gpsLimitMMeta,
+        gpsLimitM.isAcceptableOrUnknown(data['gps_limit_m']!, _gpsLimitMMeta),
+      );
+    }
     if (data.containsKey('photo')) {
       context.handle(
         _photoMeta,
@@ -722,6 +815,22 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         DriftSqlType.string,
         data['${effectivePrefix}admin_root_key'],
       ),
+      allowMemberExport: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}allow_member_export'],
+      )!,
+      allowMemberPlace: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}allow_member_place'],
+      )!,
+      allowOutsideArea: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}allow_outside_area'],
+      )!,
+      gpsLimitM: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}gps_limit_m'],
+      ),
       photo: attachedDatabase.typeMapping.read(
         DriftSqlType.blob,
         data['${effectivePrefix}photo'],
@@ -753,6 +862,16 @@ class Group extends DataClass implements Insertable<Group> {
   final bool isPublic;
   final bool joinApproval;
   final String? adminRootKey;
+
+  /// Moderation controls, all set by an admin and shared through group-meta.
+  /// [allowMemberExport] lets non-admins export; [allowMemberPlace] lets them
+  /// place points by tapping the map rather than only sending their live fix;
+  /// [allowOutsideArea] permits points beyond the task area; [gpsLimitM] caps
+  /// the accuracy a sent fix may carry, in metres, null meaning no cap.
+  final bool allowMemberExport;
+  final bool allowMemberPlace;
+  final bool allowOutsideArea;
+  final int? gpsLimitM;
   final Uint8List? photo;
   final DateTime createdAt;
   final DateTime? archivedAt;
@@ -766,6 +885,10 @@ class Group extends DataClass implements Insertable<Group> {
     required this.isPublic,
     required this.joinApproval,
     this.adminRootKey,
+    required this.allowMemberExport,
+    required this.allowMemberPlace,
+    required this.allowOutsideArea,
+    this.gpsLimitM,
     this.photo,
     required this.createdAt,
     this.archivedAt,
@@ -787,6 +910,12 @@ class Group extends DataClass implements Insertable<Group> {
     map['join_approval'] = Variable<bool>(joinApproval);
     if (!nullToAbsent || adminRootKey != null) {
       map['admin_root_key'] = Variable<String>(adminRootKey);
+    }
+    map['allow_member_export'] = Variable<bool>(allowMemberExport);
+    map['allow_member_place'] = Variable<bool>(allowMemberPlace);
+    map['allow_outside_area'] = Variable<bool>(allowOutsideArea);
+    if (!nullToAbsent || gpsLimitM != null) {
+      map['gps_limit_m'] = Variable<int>(gpsLimitM);
     }
     if (!nullToAbsent || photo != null) {
       map['photo'] = Variable<Uint8List>(photo);
@@ -815,6 +944,12 @@ class Group extends DataClass implements Insertable<Group> {
       adminRootKey: adminRootKey == null && nullToAbsent
           ? const Value.absent()
           : Value(adminRootKey),
+      allowMemberExport: Value(allowMemberExport),
+      allowMemberPlace: Value(allowMemberPlace),
+      allowOutsideArea: Value(allowOutsideArea),
+      gpsLimitM: gpsLimitM == null && nullToAbsent
+          ? const Value.absent()
+          : Value(gpsLimitM),
       photo: photo == null && nullToAbsent
           ? const Value.absent()
           : Value(photo),
@@ -840,6 +975,10 @@ class Group extends DataClass implements Insertable<Group> {
       isPublic: serializer.fromJson<bool>(json['isPublic']),
       joinApproval: serializer.fromJson<bool>(json['joinApproval']),
       adminRootKey: serializer.fromJson<String?>(json['adminRootKey']),
+      allowMemberExport: serializer.fromJson<bool>(json['allowMemberExport']),
+      allowMemberPlace: serializer.fromJson<bool>(json['allowMemberPlace']),
+      allowOutsideArea: serializer.fromJson<bool>(json['allowOutsideArea']),
+      gpsLimitM: serializer.fromJson<int?>(json['gpsLimitM']),
       photo: serializer.fromJson<Uint8List?>(json['photo']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
@@ -858,6 +997,10 @@ class Group extends DataClass implements Insertable<Group> {
       'isPublic': serializer.toJson<bool>(isPublic),
       'joinApproval': serializer.toJson<bool>(joinApproval),
       'adminRootKey': serializer.toJson<String?>(adminRootKey),
+      'allowMemberExport': serializer.toJson<bool>(allowMemberExport),
+      'allowMemberPlace': serializer.toJson<bool>(allowMemberPlace),
+      'allowOutsideArea': serializer.toJson<bool>(allowOutsideArea),
+      'gpsLimitM': serializer.toJson<int?>(gpsLimitM),
       'photo': serializer.toJson<Uint8List?>(photo),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'archivedAt': serializer.toJson<DateTime?>(archivedAt),
@@ -874,6 +1017,10 @@ class Group extends DataClass implements Insertable<Group> {
     bool? isPublic,
     bool? joinApproval,
     Value<String?> adminRootKey = const Value.absent(),
+    bool? allowMemberExport,
+    bool? allowMemberPlace,
+    bool? allowOutsideArea,
+    Value<int?> gpsLimitM = const Value.absent(),
     Value<Uint8List?> photo = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> archivedAt = const Value.absent(),
@@ -887,6 +1034,10 @@ class Group extends DataClass implements Insertable<Group> {
     isPublic: isPublic ?? this.isPublic,
     joinApproval: joinApproval ?? this.joinApproval,
     adminRootKey: adminRootKey.present ? adminRootKey.value : this.adminRootKey,
+    allowMemberExport: allowMemberExport ?? this.allowMemberExport,
+    allowMemberPlace: allowMemberPlace ?? this.allowMemberPlace,
+    allowOutsideArea: allowOutsideArea ?? this.allowOutsideArea,
+    gpsLimitM: gpsLimitM.present ? gpsLimitM.value : this.gpsLimitM,
     photo: photo.present ? photo.value : this.photo,
     createdAt: createdAt ?? this.createdAt,
     archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
@@ -910,6 +1061,16 @@ class Group extends DataClass implements Insertable<Group> {
       adminRootKey: data.adminRootKey.present
           ? data.adminRootKey.value
           : this.adminRootKey,
+      allowMemberExport: data.allowMemberExport.present
+          ? data.allowMemberExport.value
+          : this.allowMemberExport,
+      allowMemberPlace: data.allowMemberPlace.present
+          ? data.allowMemberPlace.value
+          : this.allowMemberPlace,
+      allowOutsideArea: data.allowOutsideArea.present
+          ? data.allowOutsideArea.value
+          : this.allowOutsideArea,
+      gpsLimitM: data.gpsLimitM.present ? data.gpsLimitM.value : this.gpsLimitM,
       photo: data.photo.present ? data.photo.value : this.photo,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       archivedAt: data.archivedAt.present
@@ -930,6 +1091,10 @@ class Group extends DataClass implements Insertable<Group> {
           ..write('isPublic: $isPublic, ')
           ..write('joinApproval: $joinApproval, ')
           ..write('adminRootKey: $adminRootKey, ')
+          ..write('allowMemberExport: $allowMemberExport, ')
+          ..write('allowMemberPlace: $allowMemberPlace, ')
+          ..write('allowOutsideArea: $allowOutsideArea, ')
+          ..write('gpsLimitM: $gpsLimitM, ')
           ..write('photo: $photo, ')
           ..write('createdAt: $createdAt, ')
           ..write('archivedAt: $archivedAt')
@@ -948,6 +1113,10 @@ class Group extends DataClass implements Insertable<Group> {
     isPublic,
     joinApproval,
     adminRootKey,
+    allowMemberExport,
+    allowMemberPlace,
+    allowOutsideArea,
+    gpsLimitM,
     $driftBlobEquality.hash(photo),
     createdAt,
     archivedAt,
@@ -965,6 +1134,10 @@ class Group extends DataClass implements Insertable<Group> {
           other.isPublic == this.isPublic &&
           other.joinApproval == this.joinApproval &&
           other.adminRootKey == this.adminRootKey &&
+          other.allowMemberExport == this.allowMemberExport &&
+          other.allowMemberPlace == this.allowMemberPlace &&
+          other.allowOutsideArea == this.allowOutsideArea &&
+          other.gpsLimitM == this.gpsLimitM &&
           $driftBlobEquality.equals(other.photo, this.photo) &&
           other.createdAt == this.createdAt &&
           other.archivedAt == this.archivedAt);
@@ -980,6 +1153,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
   final Value<bool> isPublic;
   final Value<bool> joinApproval;
   final Value<String?> adminRootKey;
+  final Value<bool> allowMemberExport;
+  final Value<bool> allowMemberPlace;
+  final Value<bool> allowOutsideArea;
+  final Value<int?> gpsLimitM;
   final Value<Uint8List?> photo;
   final Value<DateTime> createdAt;
   final Value<DateTime?> archivedAt;
@@ -994,6 +1171,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.isPublic = const Value.absent(),
     this.joinApproval = const Value.absent(),
     this.adminRootKey = const Value.absent(),
+    this.allowMemberExport = const Value.absent(),
+    this.allowMemberPlace = const Value.absent(),
+    this.allowOutsideArea = const Value.absent(),
+    this.gpsLimitM = const Value.absent(),
     this.photo = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.archivedAt = const Value.absent(),
@@ -1009,6 +1190,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.isPublic = const Value.absent(),
     this.joinApproval = const Value.absent(),
     this.adminRootKey = const Value.absent(),
+    this.allowMemberExport = const Value.absent(),
+    this.allowMemberPlace = const Value.absent(),
+    this.allowOutsideArea = const Value.absent(),
+    this.gpsLimitM = const Value.absent(),
     this.photo = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.archivedAt = const Value.absent(),
@@ -1027,6 +1212,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Expression<bool>? isPublic,
     Expression<bool>? joinApproval,
     Expression<String>? adminRootKey,
+    Expression<bool>? allowMemberExport,
+    Expression<bool>? allowMemberPlace,
+    Expression<bool>? allowOutsideArea,
+    Expression<int>? gpsLimitM,
     Expression<Uint8List>? photo,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? archivedAt,
@@ -1042,6 +1231,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       if (isPublic != null) 'is_public': isPublic,
       if (joinApproval != null) 'join_approval': joinApproval,
       if (adminRootKey != null) 'admin_root_key': adminRootKey,
+      if (allowMemberExport != null) 'allow_member_export': allowMemberExport,
+      if (allowMemberPlace != null) 'allow_member_place': allowMemberPlace,
+      if (allowOutsideArea != null) 'allow_outside_area': allowOutsideArea,
+      if (gpsLimitM != null) 'gps_limit_m': gpsLimitM,
       if (photo != null) 'photo': photo,
       if (createdAt != null) 'created_at': createdAt,
       if (archivedAt != null) 'archived_at': archivedAt,
@@ -1059,6 +1252,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Value<bool>? isPublic,
     Value<bool>? joinApproval,
     Value<String?>? adminRootKey,
+    Value<bool>? allowMemberExport,
+    Value<bool>? allowMemberPlace,
+    Value<bool>? allowOutsideArea,
+    Value<int?>? gpsLimitM,
     Value<Uint8List?>? photo,
     Value<DateTime>? createdAt,
     Value<DateTime?>? archivedAt,
@@ -1074,6 +1271,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       isPublic: isPublic ?? this.isPublic,
       joinApproval: joinApproval ?? this.joinApproval,
       adminRootKey: adminRootKey ?? this.adminRootKey,
+      allowMemberExport: allowMemberExport ?? this.allowMemberExport,
+      allowMemberPlace: allowMemberPlace ?? this.allowMemberPlace,
+      allowOutsideArea: allowOutsideArea ?? this.allowOutsideArea,
+      gpsLimitM: gpsLimitM ?? this.gpsLimitM,
       photo: photo ?? this.photo,
       createdAt: createdAt ?? this.createdAt,
       archivedAt: archivedAt ?? this.archivedAt,
@@ -1111,6 +1312,18 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     if (adminRootKey.present) {
       map['admin_root_key'] = Variable<String>(adminRootKey.value);
     }
+    if (allowMemberExport.present) {
+      map['allow_member_export'] = Variable<bool>(allowMemberExport.value);
+    }
+    if (allowMemberPlace.present) {
+      map['allow_member_place'] = Variable<bool>(allowMemberPlace.value);
+    }
+    if (allowOutsideArea.present) {
+      map['allow_outside_area'] = Variable<bool>(allowOutsideArea.value);
+    }
+    if (gpsLimitM.present) {
+      map['gps_limit_m'] = Variable<int>(gpsLimitM.value);
+    }
     if (photo.present) {
       map['photo'] = Variable<Uint8List>(photo.value);
     }
@@ -1138,6 +1351,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
           ..write('isPublic: $isPublic, ')
           ..write('joinApproval: $joinApproval, ')
           ..write('adminRootKey: $adminRootKey, ')
+          ..write('allowMemberExport: $allowMemberExport, ')
+          ..write('allowMemberPlace: $allowMemberPlace, ')
+          ..write('allowOutsideArea: $allowOutsideArea, ')
+          ..write('gpsLimitM: $gpsLimitM, ')
           ..write('photo: $photo, ')
           ..write('createdAt: $createdAt, ')
           ..write('archivedAt: $archivedAt, ')
@@ -5289,6 +5506,10 @@ typedef $$GroupsTableCreateCompanionBuilder =
       Value<bool> isPublic,
       Value<bool> joinApproval,
       Value<String?> adminRootKey,
+      Value<bool> allowMemberExport,
+      Value<bool> allowMemberPlace,
+      Value<bool> allowOutsideArea,
+      Value<int?> gpsLimitM,
       Value<Uint8List?> photo,
       Value<DateTime> createdAt,
       Value<DateTime?> archivedAt,
@@ -5305,6 +5526,10 @@ typedef $$GroupsTableUpdateCompanionBuilder =
       Value<bool> isPublic,
       Value<bool> joinApproval,
       Value<String?> adminRootKey,
+      Value<bool> allowMemberExport,
+      Value<bool> allowMemberPlace,
+      Value<bool> allowOutsideArea,
+      Value<int?> gpsLimitM,
       Value<Uint8List?> photo,
       Value<DateTime> createdAt,
       Value<DateTime?> archivedAt,
@@ -5423,6 +5648,26 @@ class $$GroupsTableFilterComposer
 
   ColumnFilters<String> get adminRootKey => $composableBuilder(
     column: $table.adminRootKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get allowMemberExport => $composableBuilder(
+    column: $table.allowMemberExport,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get allowMemberPlace => $composableBuilder(
+    column: $table.allowMemberPlace,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get allowOutsideArea => $composableBuilder(
+    column: $table.allowOutsideArea,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get gpsLimitM => $composableBuilder(
+    column: $table.gpsLimitM,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5571,6 +5816,26 @@ class $$GroupsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get allowMemberExport => $composableBuilder(
+    column: $table.allowMemberExport,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get allowMemberPlace => $composableBuilder(
+    column: $table.allowMemberPlace,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get allowOutsideArea => $composableBuilder(
+    column: $table.allowOutsideArea,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get gpsLimitM => $composableBuilder(
+    column: $table.gpsLimitM,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<Uint8List> get photo => $composableBuilder(
     column: $table.photo,
     builder: (column) => ColumnOrderings(column),
@@ -5630,6 +5895,24 @@ class $$GroupsTableAnnotationComposer
     column: $table.adminRootKey,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get allowMemberExport => $composableBuilder(
+    column: $table.allowMemberExport,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get allowMemberPlace => $composableBuilder(
+    column: $table.allowMemberPlace,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get allowOutsideArea => $composableBuilder(
+    column: $table.allowOutsideArea,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get gpsLimitM =>
+      $composableBuilder(column: $table.gpsLimitM, builder: (column) => column);
 
   GeneratedColumn<Uint8List> get photo =>
       $composableBuilder(column: $table.photo, builder: (column) => column);
@@ -5759,6 +6042,10 @@ class $$GroupsTableTableManager
                 Value<bool> isPublic = const Value.absent(),
                 Value<bool> joinApproval = const Value.absent(),
                 Value<String?> adminRootKey = const Value.absent(),
+                Value<bool> allowMemberExport = const Value.absent(),
+                Value<bool> allowMemberPlace = const Value.absent(),
+                Value<bool> allowOutsideArea = const Value.absent(),
+                Value<int?> gpsLimitM = const Value.absent(),
                 Value<Uint8List?> photo = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
@@ -5773,6 +6060,10 @@ class $$GroupsTableTableManager
                 isPublic: isPublic,
                 joinApproval: joinApproval,
                 adminRootKey: adminRootKey,
+                allowMemberExport: allowMemberExport,
+                allowMemberPlace: allowMemberPlace,
+                allowOutsideArea: allowOutsideArea,
+                gpsLimitM: gpsLimitM,
                 photo: photo,
                 createdAt: createdAt,
                 archivedAt: archivedAt,
@@ -5789,6 +6080,10 @@ class $$GroupsTableTableManager
                 Value<bool> isPublic = const Value.absent(),
                 Value<bool> joinApproval = const Value.absent(),
                 Value<String?> adminRootKey = const Value.absent(),
+                Value<bool> allowMemberExport = const Value.absent(),
+                Value<bool> allowMemberPlace = const Value.absent(),
+                Value<bool> allowOutsideArea = const Value.absent(),
+                Value<int?> gpsLimitM = const Value.absent(),
                 Value<Uint8List?> photo = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
@@ -5803,6 +6098,10 @@ class $$GroupsTableTableManager
                 isPublic: isPublic,
                 joinApproval: joinApproval,
                 adminRootKey: adminRootKey,
+                allowMemberExport: allowMemberExport,
+                allowMemberPlace: allowMemberPlace,
+                allowOutsideArea: allowOutsideArea,
+                gpsLimitM: gpsLimitM,
                 photo: photo,
                 createdAt: createdAt,
                 archivedAt: archivedAt,

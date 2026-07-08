@@ -12,6 +12,7 @@ import 'package:fieldchat/features/auth/application/auth_state.dart';
 import 'package:fieldchat/features/capture/gps_gate.dart';
 import 'package:fieldchat/features/capture/presentation/live_gps_strip.dart';
 import 'package:fieldchat/features/capture/staged_point.dart';
+import 'package:fieldchat/features/export/geojson.dart';
 import 'package:fieldchat/features/groups/hot_key_icons.dart';
 import 'package:fieldchat/features/groups/presentation/group_avatar.dart';
 import 'package:fieldchat/features/groups/presentation/group_info_screen.dart';
@@ -200,6 +201,80 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     super.dispose();
   }
 
+  /// Applies the group's moderation rules to a pending send, surfacing the
+  /// reason when a point must be refused. A map-placed point from a non-admin
+  /// where placement is disallowed, a fix weaker than the accuracy cap, or a
+  /// point outside the task area when that is off are blocked; an allowed
+  /// out-of-area point asks for confirmation first.
+  Future<bool> _passesModeration(GeoResult geo, {required bool placed}) async {
+    final group = await ref.read(databaseProvider).groupById(widget.groupId);
+    if (group == null) return true;
+    final iAmAdmin = ref.read(isGroupAdminProvider(widget.groupId));
+
+    if (placed && !iAmAdmin && !group.allowMemberPlace) {
+      _blockedSnack(
+        'Only admins can place points on the map here. Send your live '
+        'GPS point instead.',
+      );
+      return false;
+    }
+
+    final limit = group.gpsLimitM;
+    final accuracy = geo.accuracyM;
+    if (limit != null && accuracy != null && accuracy > limit) {
+      _blockedSnack(
+        'GPS accuracy is ±${accuracy.round()} m, weaker than the group '
+        'limit of ±$limit m. Move to open sky and try again.',
+      );
+      return false;
+    }
+
+    final aoi = group.aoiGeoJson;
+    final lat = geo.lat;
+    final lng = geo.lng;
+    if (aoi != null &&
+        lat != null &&
+        lng != null &&
+        !pointInAoi(aoi, lat, lng)) {
+      if (!group.allowOutsideArea) {
+        _blockedSnack('This point is outside the task area.');
+        return false;
+      }
+      return _confirmOutsideArea();
+    }
+    return true;
+  }
+
+  void _blockedSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<bool> _confirmOutsideArea() async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Outside the task area'),
+        content: const Text(
+          'This point falls outside the group task area. Send it anyway?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Send anyway'),
+          ),
+        ],
+      ),
+    );
+    return proceed ?? false;
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
     final photo = _pendingPhoto;
@@ -207,7 +282,6 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       return;
     }
     setState(() => _sending = true);
-    _controller.clear();
 
     try {
       final staged = _stagedPoint;
@@ -241,6 +315,11 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                 ),
               );
       }
+
+      if (!await _passesModeration(geo, placed: staged != null)) {
+        return;
+      }
+      _controller.clear();
       final auth = ref.read(authControllerProvider);
       final anonymous = ref.read(appearAnonymousProvider);
       final senderName = (anonymous || auth is! AuthSignedIn)
@@ -267,14 +346,14 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           anonymous: anonymous,
         );
       }
-    } finally {
       if (mounted) {
         setState(() {
-          _sending = false;
           _pendingPhoto = null;
           _stagedPoint = null;
         });
       }
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
     _scrollToBottom();
   }

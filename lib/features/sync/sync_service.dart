@@ -497,6 +497,16 @@ class SyncService {
             aoiGeoJson: Value(meta['aoiGeoJson'] as String?),
             isPublic: Value(meta['isPublic'] as bool? ?? false),
             joinApproval: Value(meta['joinApproval'] as bool? ?? false),
+            allowMemberExport: Value(
+              meta['allowMemberExport'] as bool? ?? false,
+            ),
+            allowMemberPlace: Value(
+              meta['allowMemberPlace'] as bool? ?? true,
+            ),
+            allowOutsideArea: Value(
+              meta['allowOutsideArea'] as bool? ?? true,
+            ),
+            gpsLimitM: Value((meta['gpsLimitM'] as num?)?.toInt()),
           ),
           onConflict: DoUpdate(
             (_) => GroupsCompanion(
@@ -508,6 +518,16 @@ class SyncService {
               aoiGeoJson: Value(meta['aoiGeoJson'] as String?),
               isPublic: Value(meta['isPublic'] as bool? ?? false),
               joinApproval: Value(meta['joinApproval'] as bool? ?? false),
+              allowMemberExport: Value(
+                meta['allowMemberExport'] as bool? ?? false,
+              ),
+              allowMemberPlace: Value(
+                meta['allowMemberPlace'] as bool? ?? true,
+              ),
+              allowOutsideArea: Value(
+                meta['allowOutsideArea'] as bool? ?? true,
+              ),
+              gpsLimitM: Value((meta['gpsLimitM'] as num?)?.toInt()),
             ),
           ),
         );

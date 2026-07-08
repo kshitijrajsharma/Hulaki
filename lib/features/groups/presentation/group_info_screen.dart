@@ -113,6 +113,54 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
     _reload();
   }
 
+  Future<void> _setAllowMemberExport(String groupId, bool value) async {
+    await ref
+        .read(groupServiceProvider)
+        .setAllowMemberExport(groupId, value: value);
+    _reload();
+  }
+
+  Future<void> _setAllowMemberPlace(String groupId, bool value) async {
+    await ref
+        .read(groupServiceProvider)
+        .setAllowMemberPlace(groupId, value: value);
+    _reload();
+  }
+
+  Future<void> _setAllowOutsideArea(String groupId, bool value) async {
+    await ref
+        .read(groupServiceProvider)
+        .setAllowOutsideArea(groupId, value: value);
+    _reload();
+  }
+
+  /// Picks the accuracy cap for sent points. Off clears it; the presets bound
+  /// the metres a fix may carry before a send is refused.
+  Future<void> _editGpsLimit(String groupId, int? current) async {
+    const presets = <int?>[null, 10, 20, 50];
+    final chosen = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('GPS accuracy limit'),
+        children: [
+          for (final preset in presets)
+            ListTile(
+              title: Text(preset == null ? 'Off' : 'Within ±$preset m'),
+              trailing: (current ?? 0) == (preset ?? 0)
+                  ? const Icon(Icons.check, color: AppColors.ink)
+                  : null,
+              onTap: () => Navigator.of(dialogContext).pop(preset ?? 0),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null) return;
+    await ref
+        .read(groupServiceProvider)
+        .setGpsLimit(groupId, chosen == 0 ? null : chosen);
+    _reload();
+  }
+
   Future<void> _acceptAdmin(String groupId) async {
     final messenger = ScaffoldMessenger.of(context);
     final identity = await ref.read(deviceIdentityProvider.future);
@@ -355,7 +403,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
               const SizedBox(height: AppSpacing.lg),
               _ManageCard(
                 caching: _caching,
-                canExport: iAmAdmin,
+                canExport: iAmAdmin || group.allowMemberExport,
                 onEditHotKeys: () => _editHotKeys(context, ref, group.id),
                 onMakeOffline: () => _makeOffline(group),
                 onExport: () => showModalBottomSheet<void>(
@@ -371,12 +419,29 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
               ],
               if (iAmAdmin) ...[
                 const SizedBox(height: AppSpacing.lg),
-                _AdminCard(
+                _ModerationCard(
                   isPublic: group.isPublic,
+                  hasArea: group.aoiGeoJson != null,
                   joinApproval: group.joinApproval,
-                  onTogglePublic: (value) => _setPublic(group.id, value),
+                  allowMemberExport: group.allowMemberExport,
+                  allowMemberPlace: group.allowMemberPlace,
+                  allowOutsideArea: group.allowOutsideArea,
+                  gpsLimitM: group.gpsLimitM,
                   onToggleApproval: (value) =>
                       unawaited(_setJoinApproval(group.id, value)),
+                  onToggleMemberExport: (value) =>
+                      unawaited(_setAllowMemberExport(group.id, value)),
+                  onToggleMemberPlace: (value) =>
+                      unawaited(_setAllowMemberPlace(group.id, value)),
+                  onToggleOutsideArea: (value) =>
+                      unawaited(_setAllowOutsideArea(group.id, value)),
+                  onEditGpsLimit: () =>
+                      unawaited(_editGpsLimit(group.id, group.gpsLimitM)),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _AdminCard(
+                  isPublic: group.isPublic,
+                  onTogglePublic: (value) => _setPublic(group.id, value),
                   onEditDescription: () =>
                       _editDescription(group.id, group.description),
                   onArchive: () => _archive(group.id),
@@ -503,21 +568,157 @@ class _Identity extends StatelessWidget {
   }
 }
 
+/// Admin-only group controls that shape what members may do: join approval,
+/// export, map placement, task-area enforcement, and the accuracy cap.
+class _ModerationCard extends StatelessWidget {
+  const _ModerationCard({
+    required this.isPublic,
+    required this.hasArea,
+    required this.joinApproval,
+    required this.allowMemberExport,
+    required this.allowMemberPlace,
+    required this.allowOutsideArea,
+    required this.gpsLimitM,
+    required this.onToggleApproval,
+    required this.onToggleMemberExport,
+    required this.onToggleMemberPlace,
+    required this.onToggleOutsideArea,
+    required this.onEditGpsLimit,
+  });
+
+  final bool isPublic;
+  final bool hasArea;
+  final bool joinApproval;
+  final bool allowMemberExport;
+  final bool allowMemberPlace;
+  final bool allowOutsideArea;
+  final int? gpsLimitM;
+  final ValueChanged<bool> onToggleApproval;
+  final ValueChanged<bool> onToggleMemberExport;
+  final ValueChanged<bool> onToggleMemberPlace;
+  final ValueChanged<bool> onToggleOutsideArea;
+  final VoidCallback onEditGpsLimit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: AppColors.mist),
+      ),
+      child: Material(
+        color: AppColors.white,
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'MODERATION',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+            if (isPublic) ...[
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.verified_user_outlined,
+                  color: AppColors.ink,
+                ),
+                title: const Text('Require approval to join'),
+                subtitle: const Text(
+                  'People request access; an admin approves',
+                ),
+                value: joinApproval,
+                onChanged: onToggleApproval,
+              ),
+              const Divider(height: 1),
+            ],
+            SwitchListTile(
+              secondary: const Icon(
+                Icons.download_outlined,
+                color: AppColors.ink,
+              ),
+              title: const Text('Allow everyone to export'),
+              subtitle: const Text('Members can download the data, not just '
+                  'admins'),
+              value: allowMemberExport,
+              onChanged: onToggleMemberExport,
+            ),
+            const Divider(height: 1),
+            SwitchListTile(
+              secondary: const Icon(
+                Icons.add_location_alt_outlined,
+                color: AppColors.ink,
+              ),
+              title: const Text('Allow members to place points'),
+              subtitle: const Text('Off means members can only send their '
+                  'live GPS point'),
+              value: allowMemberPlace,
+              onChanged: onToggleMemberPlace,
+            ),
+            if (hasArea) ...[
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.fmd_bad_outlined,
+                  color: AppColors.ink,
+                ),
+                title: const Text('Allow points outside the area'),
+                subtitle: const Text('Off blocks sending beyond the task '
+                    'area'),
+                value: allowOutsideArea,
+                onChanged: onToggleOutsideArea,
+              ),
+            ],
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(
+                Icons.gps_fixed,
+                color: AppColors.ink,
+              ),
+              title: const Text('GPS accuracy limit'),
+              subtitle: Text(
+                gpsLimitM == null
+                    ? 'Off. Points send at any accuracy'
+                    : 'Refuse points weaker than ±$gpsLimitM m',
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: AppColors.textFaint,
+              ),
+              onTap: onEditGpsLimit,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AdminCard extends StatelessWidget {
   const _AdminCard({
     required this.isPublic,
-    required this.joinApproval,
     required this.onTogglePublic,
-    required this.onToggleApproval,
     required this.onEditDescription,
     required this.onArchive,
     required this.onDelete,
   });
 
   final bool isPublic;
-  final bool joinApproval;
   final ValueChanged<bool> onTogglePublic;
-  final ValueChanged<bool> onToggleApproval;
   final VoidCallback onEditDescription;
   final VoidCallback onArchive;
   final VoidCallback onDelete;
@@ -541,21 +742,6 @@ class _AdminCard extends StatelessWidget {
               value: isPublic,
               onChanged: onTogglePublic,
             ),
-            if (isPublic) ...[
-              const Divider(height: 1),
-              SwitchListTile(
-                secondary: const Icon(
-                  Icons.verified_user_outlined,
-                  color: AppColors.ink,
-                ),
-                title: const Text('Require approval to join'),
-                subtitle: const Text(
-                  'People request access; an admin approves',
-                ),
-                value: joinApproval,
-                onChanged: onToggleApproval,
-              ),
-            ],
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.notes, color: AppColors.ink),

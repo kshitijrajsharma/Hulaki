@@ -32,6 +32,20 @@ class Groups extends Table {
   BoolColumn get isPublic => boolean().withDefault(const Constant(false))();
   BoolColumn get joinApproval => boolean().withDefault(const Constant(false))();
   TextColumn get adminRootKey => text().nullable()();
+
+  /// Moderation controls, all set by an admin and shared through group-meta.
+  /// [allowMemberExport] lets non-admins export; [allowMemberPlace] lets them
+  /// place points by tapping the map rather than only sending their live fix;
+  /// [allowOutsideArea] permits points beyond the task area; [gpsLimitM] caps
+  /// the accuracy a sent fix may carry, in metres, null meaning no cap.
+  BoolColumn get allowMemberExport =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get allowMemberPlace =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get allowOutsideArea =>
+      boolean().withDefault(const Constant(true))();
+  IntColumn get gpsLimitM => integer().nullable()();
+
   BlobColumn get photo => blob().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get archivedAt => dateTime().nullable()();
@@ -183,7 +197,7 @@ class LocalDatabase extends _$LocalDatabase {
     : super(executor ?? driftDatabase(name: 'fieldchat'));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -218,6 +232,12 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 9) {
         await m.createTable(adminEvents);
+      }
+      if (from < 10) {
+        await m.addColumn(groups, groups.allowMemberExport);
+        await m.addColumn(groups, groups.allowMemberPlace);
+        await m.addColumn(groups, groups.allowOutsideArea);
+        await m.addColumn(groups, groups.gpsLimitM);
       }
     },
   );

@@ -26,6 +26,26 @@ void main() {
     expect(near.first.distanceM, lessThan(near.last.distanceM!));
   });
 
+  test('searchByName matches case-insensitively, ignoring distance', () async {
+    final dir = InMemoryPublicDirectory();
+    await dir.publish(at('Riverside cleanup', 27.70, 85.30));
+    await dir.publish(at('River survey', 40.00, 20.00)); // far away
+    await dir.publish(at('Forest watch', 27.70, 85.30));
+
+    final found = await dir.searchByName('river');
+
+    expect(
+      found.map((g) => g.groupId),
+      ['River survey', 'Riverside cleanup'],
+    );
+  });
+
+  test('searchByName returns nothing for a blank query', () async {
+    final dir = InMemoryPublicDirectory();
+    await dir.publish(at('Anything', 27.70, 85.30));
+    expect(await dir.searchByName('   '), isEmpty);
+  });
+
   test('remove takes a group out of the directory', () async {
     final dir = InMemoryPublicDirectory();
     await dir.publish(at('g', 27.70, 85.30));
