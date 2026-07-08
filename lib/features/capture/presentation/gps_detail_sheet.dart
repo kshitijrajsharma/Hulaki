@@ -4,12 +4,11 @@ import 'package:fieldchat/app/providers.dart';
 import 'package:fieldchat/design/app_colors.dart';
 import 'package:fieldchat/design/app_spacing.dart';
 import 'package:fieldchat/features/capture/utm.dart';
+import 'package:fieldchat/features/settings/units.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Opens the live GPS detail sheet: quality, coordinates (lat/lon or UTM),
-/// altitude, speed, and heading, all updating as fixes arrive.
 Future<void> showGpsDetailSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -28,12 +27,47 @@ class _GpsDetailSheet extends ConsumerStatefulWidget {
   ConsumerState<_GpsDetailSheet> createState() => _GpsDetailSheetState();
 }
 
-class _GpsDetailSheetState extends ConsumerState<_GpsDetailSheet> {
+class _GpsDetailSheetState extends ConsumerState<_GpsDetailSheet>
+    with SingleTickerProviderStateMixin {
   bool _showUtm = false;
+
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+
+  late final Animation<double> _beat = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween<double>(
+        begin: 1,
+        end: 1.3,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 35,
+    ),
+    TweenSequenceItem(
+      tween: Tween<double>(
+        begin: 1.3,
+        end: 1,
+      ).chain(CurveTween(curve: Curves.easeIn)),
+      weight: 65,
+    ),
+  ]).animate(_pulse);
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(liveLocationProvider, (_, next) {
+      if (next.asData?.value != null) {
+        unawaited(_pulse.forward(from: 0));
+      }
+    });
     final location = ref.watch(liveLocationProvider).asData?.value;
+    final heading = ref.watch(compassHeadingProvider).asData?.value;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -75,7 +109,7 @@ class _GpsDetailSheetState extends ConsumerState<_GpsDetailSheet> {
                 ),
               )
             else ...[
-              _QualityBanner(accuracyM: location.accuracyM),
+              _QualityBanner(accuracyM: location.accuracyM, pulse: _beat),
               const SizedBox(height: AppSpacing.lg),
               _CoordinateBlock(
                 showUtm: _showUtm,
@@ -89,12 +123,8 @@ class _GpsDetailSheetState extends ConsumerState<_GpsDetailSheet> {
                 value: _metersOrDash(location.altitudeM),
               ),
               _MetricRow(
-                label: 'Speed',
-                value: _speed(location.speedMps),
-              ),
-              _MetricRow(
                 label: 'Heading',
-                value: _heading(location.headingDeg),
+                value: _heading(heading),
               ),
             ],
           ],
@@ -106,17 +136,18 @@ class _GpsDetailSheetState extends ConsumerState<_GpsDetailSheet> {
   String _metersOrDash(double? meters) =>
       meters == null ? '-' : '${meters.toStringAsFixed(0)} m';
 
-  String _speed(double? mps) =>
-      mps == null || mps < 0 ? '-' : '${mps.toStringAsFixed(1)} m/s';
-
-  String _heading(double? degrees) =>
-      degrees == null || degrees < 0 ? '-' : '${degrees.toStringAsFixed(0)}°';
+  String _heading(double? degrees) {
+    if (degrees == null) return '-';
+    final normalized = (degrees % 360 + 360) % 360;
+    return '${normalized.round()}° ${cardinalFor(normalized)}';
+  }
 }
 
 class _QualityBanner extends StatelessWidget {
-  const _QualityBanner({required this.accuracyM});
+  const _QualityBanner({required this.accuracyM, required this.pulse});
 
   final double accuracyM;
+  final Animation<double> pulse;
 
   @override
   Widget build(BuildContext context) {
@@ -133,10 +164,13 @@ class _QualityBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            strong ? Icons.gps_fixed : Icons.gps_not_fixed,
-            size: 18,
-            color: tone,
+          ScaleTransition(
+            scale: pulse,
+            child: Icon(
+              strong ? Icons.gps_fixed : Icons.gps_not_fixed,
+              size: 18,
+              color: tone,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(

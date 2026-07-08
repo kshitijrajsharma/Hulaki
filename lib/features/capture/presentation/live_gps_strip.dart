@@ -16,6 +16,7 @@ class LiveGpsStrip extends ConsumerWidget {
     final location = ref.watch(liveLocationProvider).asData?.value;
     return GpsStrip(
       accuracyMeters: location?.accuracyM,
+      pulseKey: location,
       onTap: () => showGpsDetailSheet(context),
     );
   }

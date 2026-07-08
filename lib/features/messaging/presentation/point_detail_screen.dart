@@ -10,6 +10,7 @@ import 'package:fieldchat/features/export/geojson.dart';
 import 'package:fieldchat/features/groups/group_member_view.dart';
 import 'package:fieldchat/features/groups/hot_key_icons.dart';
 import 'package:fieldchat/features/map/map_screen.dart';
+import 'package:fieldchat/features/map/navigate_sheet.dart';
 import 'package:fieldchat/features/settings/units.dart';
 import 'package:fieldchat/features/settings/units_provider.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +18,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide buildFeatureCollection;
-import 'package:url_launcher/url_launcher.dart';
 
 typedef MediaResolver = Future<Uint8List?> Function(String mediaId);
 
@@ -109,13 +109,11 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
 
   Future<void> _navigate() async {
     final message = widget.message;
-    final label = Uri.encodeComponent(message.body ?? 'FieldChat point');
-    await launchUrl(
-      Uri.parse(
-        'geo:${message.lat},${message.lng}'
-        '?q=${message.lat},${message.lng}($label)',
-      ),
-      mode: LaunchMode.externalApplication,
+    await showNavigateSheet(
+      context: context,
+      lat: message.lat!,
+      lng: message.lng!,
+      label: message.body,
     );
   }
 

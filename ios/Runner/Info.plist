@@ -94,5 +94,11 @@
 	<array>
 		<string>com.pravera.flutter_foreground_task.refresh</string>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>comgooglemaps</string>
+		<string>waze</string>
+		<string>osmandmaps</string>
+	</array>
 </dict>
 </plist>

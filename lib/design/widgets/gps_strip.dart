@@ -1,24 +1,86 @@
+import 'dart:async';
+
 import 'package:fieldchat/design/app_colors.dart';
 import 'package:fieldchat/design/app_spacing.dart';
 import 'package:flutter/material.dart';
 
-/// Accuracy travels with every point. This strip shows the live GPS state
-/// as signal bars plus a +/- metres badge. Green when strong, amber when the
-/// fix is poor, muted while still acquiring (null accuracy).
-class GpsStrip extends StatelessWidget {
+class GpsStrip extends StatefulWidget {
   const GpsStrip({
     required this.accuracyMeters,
     this.alertAbove = 15,
     this.onTap,
+    this.pulseKey,
     super.key,
   });
 
   final double? accuracyMeters;
   final double alertAbove;
   final VoidCallback? onTap;
+  final Object? pulseKey;
 
-  bool get _acquiring => accuracyMeters == null;
-  bool get _strong => accuracyMeters != null && accuracyMeters! <= alertAbove;
+  @override
+  State<GpsStrip> createState() => _GpsStripState();
+}
+
+class _GpsStripState extends State<GpsStrip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+
+  late final Animation<double> _beat = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween<double>(
+        begin: 1,
+        end: 1.3,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 35,
+    ),
+    TweenSequenceItem(
+      tween: Tween<double>(
+        begin: 1.3,
+        end: 1,
+      ).chain(CurveTween(curve: Curves.easeIn)),
+      weight: 65,
+    ),
+  ]).animate(_pulse);
+
+  late final Animation<double> _dotFlash = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween<double>(
+        begin: 0.35,
+        end: 1,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 35,
+    ),
+    TweenSequenceItem(
+      tween: Tween<double>(
+        begin: 1,
+        end: 0.35,
+      ).chain(CurveTween(curve: Curves.easeIn)),
+      weight: 65,
+    ),
+  ]).animate(_pulse);
+
+  bool get _acquiring => widget.accuracyMeters == null;
+  bool get _strong =>
+      widget.accuracyMeters != null &&
+      widget.accuracyMeters! <= widget.alertAbove;
+
+  @override
+  void didUpdateWidget(GpsStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_acquiring && widget.pulseKey != oldWidget.pulseKey) {
+      unawaited(_pulse.forward(from: 0));
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +98,7 @@ class GpsStrip extends StatelessWidget {
     }
 
     return InkWell(
-      onTap: onTap,
+      onTap: widget.onTap,
       borderRadius: BorderRadius.circular(11),
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -50,7 +112,31 @@ class GpsStrip extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _SignalBars(color: tone),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ScaleTransition(
+                  scale: _beat,
+                  child: _SignalBars(color: tone),
+                ),
+                if (!_acquiring)
+                  Positioned(
+                    top: -3,
+                    right: -4,
+                    child: FadeTransition(
+                      opacity: _dotFlash,
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: tone,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(width: 7),
             Text(
               label,
@@ -63,14 +149,14 @@ class GpsStrip extends StatelessWidget {
             const Spacer(),
             if (!_acquiring)
               Text(
-                '±${accuracyMeters!.round()} m',
+                '±${widget.accuracyMeters!.round()} m',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: tone,
                 ),
               ),
-            if (onTap != null) ...[
+            if (widget.onTap != null) ...[
               const SizedBox(width: 4),
               Icon(Icons.chevron_right, size: 15, color: tone),
             ],

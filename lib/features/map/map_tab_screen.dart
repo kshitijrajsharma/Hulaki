@@ -14,7 +14,9 @@ import 'package:fieldchat/features/discovery/group_preview_screen.dart';
 import 'package:fieldchat/features/discovery/public_directory.dart';
 import 'package:fieldchat/features/export/geojson.dart';
 import 'package:fieldchat/features/map/map_screen.dart';
+import 'package:fieldchat/features/map/user_location.dart';
 import 'package:fieldchat/features/messaging/presentation/chat_thread_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide buildFeatureCollection;
@@ -40,6 +42,7 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
   Map<int, Offset> _communityOffsets = const {};
   bool _showCommunities = false;
   bool _ready = false;
+  LatLng? _myLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -59,9 +62,15 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
               target: LatLng(27.7051, 85.3051),
               zoom: 12,
             ),
+            myLocationEnabled: true,
+            myLocationRenderMode: MyLocationRenderMode.compass,
             onMapCreated: (controller) =>
                 _controller = controller..onFeatureTapped.add(_onAreaTapped),
             onStyleLoadedCallback: _onStyleLoaded,
+            onUserLocationUpdated: (location) => _myLocation = LatLng(
+              location.position.latitude,
+              location.position.longitude,
+            ),
             onCameraIdle: _reposition,
           ),
           if (!_showCommunities)
@@ -131,11 +140,12 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
   }
 
   Future<void> _loadCommunities() async {
-    final live = ref.read(liveLocationProvider).asData?.value;
-    if (live == null) return;
+    final me = _myLocation ?? await currentUserLatLng();
+    if (me == null) return;
+    _myLocation = me;
     final groups = await ref
         .read(publicDirectoryProvider)
-        .nearby(lat: live.lat, lng: live.lng, radiusKm: 25);
+        .nearby(lat: me.latitude, lng: me.longitude, radiusKm: 25);
     if (mounted) setState(() => _communities = groups);
   }
 
@@ -152,7 +162,19 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
   Future<void> _onStyleLoaded() async {
     await _refreshAreas();
     _ready = true;
-    await _frameAll();
+    if (_areas.isEmpty) {
+      await _centerOnMe();
+    } else {
+      await _frameAll();
+    }
+  }
+
+  Future<void> _centerOnMe() async {
+    _myLocation ??= await currentUserLatLng();
+    final me = _myLocation;
+    final controller = _controller;
+    if (me == null || controller == null) return;
+    await controller.animateCamera(CameraUpdate.newLatLngZoom(me, 15));
   }
 
   Future<void> _refreshAreas() async {
@@ -230,9 +252,10 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
   Future<void> _reposition() async {
     final controller = _controller;
     if (controller == null || !mounted) return;
-    // toScreenLocation returns physical pixels; Positioned uses logical ones.
     final media = MediaQuery.of(context);
-    final ratio = media.devicePixelRatio;
+    final ratio = defaultTargetPlatform == TargetPlatform.android
+        ? media.devicePixelRatio
+        : 1;
     final size = media.size;
 
     Future<Map<int, Offset>> project(List<LatLng> centers) async {

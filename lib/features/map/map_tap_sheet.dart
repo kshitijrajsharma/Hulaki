@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:fieldchat/design/app_colors.dart';
 import 'package:fieldchat/design/app_spacing.dart';
+import 'package:fieldchat/features/map/navigate_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Sheet for a tap on an empty map spot: place a point here (staged into the
 /// composer) or hand the spot to an external navigation app. Returns true when
@@ -65,8 +65,10 @@ Future<bool> showMapTapSheet({
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      unawaited(_navigate(lat, lng));
                       Navigator.of(sheetContext).pop(false);
+                      unawaited(
+                        showNavigateSheet(context: context, lat: lat, lng: lng),
+                      );
                     },
                     icon: const Icon(Icons.navigation_outlined, size: 16),
                     label: const Text('Navigate here'),
@@ -88,9 +90,4 @@ Future<bool> showMapTapSheet({
     ),
   );
   return chose ?? false;
-}
-
-Future<void> _navigate(double lat, double lng) async {
-  final uri = Uri.parse('geo:$lat,$lng?q=$lat,$lng(FieldChat point)');
-  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

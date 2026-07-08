@@ -15,6 +15,7 @@ import 'package:fieldchat/features/groups/hot_key_icons.dart';
 import 'package:fieldchat/features/map/map_tap_sheet.dart';
 import 'package:fieldchat/features/map/marker_images.dart';
 import 'package:fieldchat/features/map/point_sheet.dart';
+import 'package:fieldchat/features/map/user_location.dart';
 import 'package:fieldchat/features/onboarding/coach_tip.dart';
 import 'package:fieldchat/features/track/track_recorder.dart';
 import 'package:flutter/material.dart';
@@ -345,6 +346,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ['has', 'point_count'],
       ],
     );
+    await controller.addGeoJsonSource('tap', _emptyFeatures());
+    await controller.addCircleLayer(
+      'tap',
+      'tap-marker',
+      const CircleLayerProperties(
+        circleRadius: 7,
+        circleColor: '#2F6BFF',
+        circleStrokeColor: '#FFFFFF',
+        circleStrokeWidth: 2,
+        circleOpacity: 0.9,
+      ),
+    );
     _sourcesReady = true;
 
     // Framing and the focused-point sheet belong to the first load only. A
@@ -358,9 +371,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     if ((collection['features'] as List).isNotEmpty) {
       await _centerOnData(collection);
-    } else {
+    } else if (_aoiGeoJson != null) {
       await _frameAoi();
+    } else {
+      await _centerOnMe();
     }
+  }
+
+  Future<void> _centerOnMe() async {
+    final me = _lastLocation ?? await currentUserLatLng();
+    if (me == null) return;
+    await _controller?.animateCamera(CameraUpdate.newLatLngZoom(me, 15));
   }
 
   /// Frames the group's task area, if it has one.
@@ -388,16 +409,45 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// featureTapsTriggersMapClick defaults to false.
   Future<void> _onMapTapped(LatLng coordinates) async {
     if (!mounted) return;
+    if (_sourcesReady) {
+      await _controller?.setGeoJsonSource('tap', _pointFeature(coordinates));
+      if (!mounted) return;
+    }
     final add = await showMapTapSheet(
       context: context,
       lat: coordinates.latitude,
       lng: coordinates.longitude,
     );
-    if (!add || !mounted) return;
+    if (!mounted) return;
+    if (!add) {
+      if (_sourcesReady) {
+        await _controller?.setGeoJsonSource('tap', _emptyFeatures());
+      }
+      return;
+    }
     Navigator.of(context).pop(
       StagedPoint(lat: coordinates.latitude, lng: coordinates.longitude),
     );
   }
+
+  Map<String, dynamic> _emptyFeatures() => {
+    'type': 'FeatureCollection',
+    'features': <dynamic>[],
+  };
+
+  Map<String, dynamic> _pointFeature(LatLng at) => {
+    'type': 'FeatureCollection',
+    'features': [
+      {
+        'type': 'Feature',
+        'geometry': {
+          'type': 'Point',
+          'coordinates': [at.longitude, at.latitude],
+        },
+        'properties': <String, dynamic>{},
+      },
+    ],
+  };
 
   /// Renders one pin image per hot-key (colour + icon) plus a neutral default,
   /// so the symbol layer can pick an image by the feature's `icon` property.

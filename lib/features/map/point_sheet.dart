@@ -4,10 +4,10 @@ import 'package:fieldchat/data/local/database.dart';
 import 'package:fieldchat/design/app_colors.dart';
 import 'package:fieldchat/design/app_spacing.dart';
 import 'package:fieldchat/features/groups/hot_key_icons.dart';
+import 'package:fieldchat/features/map/navigate_sheet.dart';
 import 'package:fieldchat/features/messaging/presentation/point_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 typedef MediaResolver = Future<Uint8List?> Function(String mediaId);
 
@@ -128,7 +128,17 @@ Future<void> showPointSheet({
                   child: FilledButton.icon(
                     onPressed: message.locationPending
                         ? null
-                        : () => unawaited(_navigate(message)),
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            unawaited(
+                              showNavigateSheet(
+                                context: context,
+                                lat: message.lat!,
+                                lng: message.lng!,
+                                label: message.body,
+                              ),
+                            );
+                          },
                     icon: const Icon(Icons.navigation_outlined, size: 16),
                     label: const Text('Navigate'),
                   ),
@@ -162,14 +172,6 @@ Future<void> showPointSheet({
       ),
     ),
   );
-}
-
-Future<void> _navigate(Message message) async {
-  final label = Uri.encodeComponent(message.body ?? 'FieldChat point');
-  final uri = Uri.parse(
-    'geo:${message.lat},${message.lng}?q=${message.lat},${message.lng}($label)',
-  );
-  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
 Future<void> _copyCoords(BuildContext context, Message message) async {
