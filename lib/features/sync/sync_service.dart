@@ -88,6 +88,7 @@ class SyncService {
 
   /// Subscribes to live envelopes for a group and pulls anything missed.
   Future<void> start(String groupId) async {
+    if (_disposed) return;
     _subscriptions[groupId] ??= transport
         .subscribe(groupId)
         .listen((envelope) => unawaited(_ingest(envelope)));
@@ -100,9 +101,11 @@ class SyncService {
   }
 
   Future<void> catchUp(String groupId) async {
+    if (_disposed) return;
     final since = await db.cursorFor(groupId);
     final envelopes = await transport.fetchSince(groupId, since);
     for (final envelope in envelopes) {
+      if (_disposed) return;
       await _ingest(envelope, applyOwnMeta: true);
     }
   }
@@ -379,6 +382,7 @@ class SyncService {
   }
 
   Future<void> _ingest(Envelope envelope, {bool applyOwnMeta = false}) async {
+    if (_disposed) return;
     // Process (decrypt + persist) before advancing the cursor. If anything
     // throws, the cursor stays put so catch-up retries this envelope rather
     // than skipping it and losing the observation for good.

@@ -132,11 +132,13 @@ class GroupService {
     }
 
     await _addMembership(id, role: 'admin');
-    // The group is durable locally now. Start sync and publish its metadata and
-    // this device's identity in the background so creation never blocks.
-    unawaited(sync.start(id));
-    unawaited(_publishFullMeta(id));
-    unawaited(announceIdentity(id, identity));
+    // The group is durable locally now. Publish its metadata before returning,
+    // so it is the first envelope: a later tag edit must not outrun it and let
+    // the original tags prune the edit on other devices. The identity announce
+    // follows, then the live subscription starts.
+    await _publishFullMeta(id);
+    await announceIdentity(id, identity);
+    await sync.start(id);
 
     return (await db.groupById(id))!;
   }

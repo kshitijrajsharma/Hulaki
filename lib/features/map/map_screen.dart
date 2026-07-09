@@ -436,20 +436,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final focusId = widget.focusMessageId;
     if (focusId != null && await _focusMessage(focusId)) return;
 
-    // A field map opens where you are standing. Center on a fix already held;
-    // otherwise frame the group's points or area as a placeholder and recenter
-    // on the first location that arrives (handled in _updateLocation).
+    // On first open, frame the group's mapped data so its points are visible
+    // even when you are standing far from them; the recenter button jumps back
+    // to your location. With nothing mapped yet, open where you are instead.
+    if ((collection['features'] as List).isNotEmpty) {
+      await _centerOnData(collection);
+      return;
+    }
+    if (_aoiGeoJson != null) {
+      await _frameAoi();
+      return;
+    }
     final me = _lastLocation;
     if (me != null) {
       await _controller?.animateCamera(CameraUpdate.newLatLngZoom(me, 16.5));
       return;
     }
     _pendingInitialCenter = true;
-    if ((collection['features'] as List).isNotEmpty) {
-      await _centerOnData(collection);
-    } else if (_aoiGeoJson != null) {
-      await _frameAoi();
-    }
     unawaited(_seekInitialLocation());
   }
 
