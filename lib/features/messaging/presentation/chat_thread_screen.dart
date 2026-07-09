@@ -205,7 +205,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   /// Applies the group's moderation rules to a pending send, surfacing the
   /// reason when a point must be refused. A map-placed point from a non-admin
   /// where placement is disallowed, a fix weaker than the accuracy cap, or a
-  /// point outside the task area when that is off are blocked; an allowed
+  /// point outside the mapping area when that is off are blocked; an allowed
   /// out-of-area point asks for confirmation first.
   Future<bool> _passesModeration(GeoResult geo, {required bool placed}) async {
     final group = await ref.read(databaseProvider).groupById(widget.groupId);

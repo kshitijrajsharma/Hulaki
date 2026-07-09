@@ -70,6 +70,7 @@ void main() {
     await owner.groups.setAllowMemberExport(group.id, value: true);
     await owner.groups.setAllowMemberPlace(group.id, value: false);
     await owner.groups.setAllowOutsideArea(group.id, value: false);
+    await owner.groups.setAllowMemberTags(group.id, value: true);
     await owner.groups.setGpsLimit(group.id, 20);
 
     await _waitFor(() async {
@@ -78,7 +79,45 @@ void main() {
           g.allowMemberExport &&
           !g.allowMemberPlace &&
           !g.allowOutsideArea &&
+          g.allowMemberTags &&
           g.gpsLimitM == 20;
+    });
+  });
+
+  test("an admin's own tags return after rejoining", () async {
+    final transport = InMemoryTransport();
+    final blobs = InMemoryBlobStore();
+    final owner = _Device('owner', transport, blobs);
+    addTearDown(() async {
+      await owner.dispose();
+      await transport.dispose();
+    });
+
+    final group = await owner.groups.createGroup(
+      name: 'Ward tags',
+      identity: await IdentityKeys.generate(),
+      hotKeys: const [
+        HotKeySpec(label: 'Tree', colorValue: 0xFF3C7A4E, iconName: 'park'),
+        HotKeySpec(label: 'Bin', colorValue: 0xFF15181B, iconName: 'delete'),
+      ],
+    );
+    // Let the group-meta reach the relay before the rejoin catches up.
+    await _waitFor(() async => (await owner.db.outboxEntries()).isEmpty);
+
+    // The same user reinstalls: a fresh device with the same id rejoins by
+    // link. The tags live only in that user's own published meta.
+    final rejoined = _Device('owner', transport, blobs);
+    addTearDown(rejoined.dispose);
+    await rejoined.groups.joinViaLink(
+      owner.groups.inviteLinkFor(group),
+      await IdentityKeys.generate(),
+    );
+
+    await _waitFor(() async {
+      final labels = (await rejoined.db.hotKeysFor(group.id))
+          .map((t) => t.label)
+          .toSet();
+      return labels.containsAll({'Tree', 'Bin'});
     });
   });
 

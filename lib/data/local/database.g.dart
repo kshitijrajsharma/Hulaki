@@ -585,6 +585,21 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _allowMemberTagsMeta = const VerificationMeta(
+    'allowMemberTags',
+  );
+  @override
+  late final GeneratedColumn<bool> allowMemberTags = GeneratedColumn<bool>(
+    'allow_member_tags',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("allow_member_tags" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _photoMeta = const VerificationMeta('photo');
   @override
   late final GeneratedColumn<Uint8List> photo = GeneratedColumn<Uint8List>(
@@ -654,6 +669,7 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     allowMemberPlace,
     allowOutsideArea,
     gpsLimitM,
+    allowMemberTags,
     photo,
     photoBlobId,
     photoKey,
@@ -776,6 +792,15 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         gpsLimitM.isAcceptableOrUnknown(data['gps_limit_m']!, _gpsLimitMMeta),
       );
     }
+    if (data.containsKey('allow_member_tags')) {
+      context.handle(
+        _allowMemberTagsMeta,
+        allowMemberTags.isAcceptableOrUnknown(
+          data['allow_member_tags']!,
+          _allowMemberTagsMeta,
+        ),
+      );
+    }
     if (data.containsKey('photo')) {
       context.handle(
         _photoMeta,
@@ -870,6 +895,10 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         DriftSqlType.int,
         data['${effectivePrefix}gps_limit_m'],
       ),
+      allowMemberTags: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}allow_member_tags'],
+      )!,
       photo: attachedDatabase.typeMapping.read(
         DriftSqlType.blob,
         data['${effectivePrefix}photo'],
@@ -913,12 +942,14 @@ class Group extends DataClass implements Insertable<Group> {
   /// Moderation controls, all set by an admin and shared through group-meta.
   /// [allowMemberExport] lets non-admins export; [allowMemberPlace] lets them
   /// place points by tapping the map rather than only sending their live fix;
-  /// [allowOutsideArea] permits points beyond the task area; [gpsLimitM] caps
-  /// the accuracy a sent fix may carry, in metres, null meaning no cap.
+  /// [allowOutsideArea] permits points beyond the mapping area; [gpsLimitM] caps
+  /// the accuracy a sent fix may carry, in metres, null meaning no cap;
+  /// [allowMemberTags] lets non-admins add, edit and remove the quick tags.
   final bool allowMemberExport;
   final bool allowMemberPlace;
   final bool allowOutsideArea;
   final int? gpsLimitM;
+  final bool allowMemberTags;
   final Uint8List? photo;
 
   /// The cover photo shared with members: its encrypted blob id in object
@@ -942,6 +973,7 @@ class Group extends DataClass implements Insertable<Group> {
     required this.allowMemberPlace,
     required this.allowOutsideArea,
     this.gpsLimitM,
+    required this.allowMemberTags,
     this.photo,
     this.photoBlobId,
     this.photoKey,
@@ -972,6 +1004,7 @@ class Group extends DataClass implements Insertable<Group> {
     if (!nullToAbsent || gpsLimitM != null) {
       map['gps_limit_m'] = Variable<int>(gpsLimitM);
     }
+    map['allow_member_tags'] = Variable<bool>(allowMemberTags);
     if (!nullToAbsent || photo != null) {
       map['photo'] = Variable<Uint8List>(photo);
     }
@@ -1011,6 +1044,7 @@ class Group extends DataClass implements Insertable<Group> {
       gpsLimitM: gpsLimitM == null && nullToAbsent
           ? const Value.absent()
           : Value(gpsLimitM),
+      allowMemberTags: Value(allowMemberTags),
       photo: photo == null && nullToAbsent
           ? const Value.absent()
           : Value(photo),
@@ -1046,6 +1080,7 @@ class Group extends DataClass implements Insertable<Group> {
       allowMemberPlace: serializer.fromJson<bool>(json['allowMemberPlace']),
       allowOutsideArea: serializer.fromJson<bool>(json['allowOutsideArea']),
       gpsLimitM: serializer.fromJson<int?>(json['gpsLimitM']),
+      allowMemberTags: serializer.fromJson<bool>(json['allowMemberTags']),
       photo: serializer.fromJson<Uint8List?>(json['photo']),
       photoBlobId: serializer.fromJson<String?>(json['photoBlobId']),
       photoKey: serializer.fromJson<String?>(json['photoKey']),
@@ -1070,6 +1105,7 @@ class Group extends DataClass implements Insertable<Group> {
       'allowMemberPlace': serializer.toJson<bool>(allowMemberPlace),
       'allowOutsideArea': serializer.toJson<bool>(allowOutsideArea),
       'gpsLimitM': serializer.toJson<int?>(gpsLimitM),
+      'allowMemberTags': serializer.toJson<bool>(allowMemberTags),
       'photo': serializer.toJson<Uint8List?>(photo),
       'photoBlobId': serializer.toJson<String?>(photoBlobId),
       'photoKey': serializer.toJson<String?>(photoKey),
@@ -1092,6 +1128,7 @@ class Group extends DataClass implements Insertable<Group> {
     bool? allowMemberPlace,
     bool? allowOutsideArea,
     Value<int?> gpsLimitM = const Value.absent(),
+    bool? allowMemberTags,
     Value<Uint8List?> photo = const Value.absent(),
     Value<String?> photoBlobId = const Value.absent(),
     Value<String?> photoKey = const Value.absent(),
@@ -1111,6 +1148,7 @@ class Group extends DataClass implements Insertable<Group> {
     allowMemberPlace: allowMemberPlace ?? this.allowMemberPlace,
     allowOutsideArea: allowOutsideArea ?? this.allowOutsideArea,
     gpsLimitM: gpsLimitM.present ? gpsLimitM.value : this.gpsLimitM,
+    allowMemberTags: allowMemberTags ?? this.allowMemberTags,
     photo: photo.present ? photo.value : this.photo,
     photoBlobId: photoBlobId.present ? photoBlobId.value : this.photoBlobId,
     photoKey: photoKey.present ? photoKey.value : this.photoKey,
@@ -1146,6 +1184,9 @@ class Group extends DataClass implements Insertable<Group> {
           ? data.allowOutsideArea.value
           : this.allowOutsideArea,
       gpsLimitM: data.gpsLimitM.present ? data.gpsLimitM.value : this.gpsLimitM,
+      allowMemberTags: data.allowMemberTags.present
+          ? data.allowMemberTags.value
+          : this.allowMemberTags,
       photo: data.photo.present ? data.photo.value : this.photo,
       photoBlobId: data.photoBlobId.present
           ? data.photoBlobId.value
@@ -1174,6 +1215,7 @@ class Group extends DataClass implements Insertable<Group> {
           ..write('allowMemberPlace: $allowMemberPlace, ')
           ..write('allowOutsideArea: $allowOutsideArea, ')
           ..write('gpsLimitM: $gpsLimitM, ')
+          ..write('allowMemberTags: $allowMemberTags, ')
           ..write('photo: $photo, ')
           ..write('photoBlobId: $photoBlobId, ')
           ..write('photoKey: $photoKey, ')
@@ -1198,6 +1240,7 @@ class Group extends DataClass implements Insertable<Group> {
     allowMemberPlace,
     allowOutsideArea,
     gpsLimitM,
+    allowMemberTags,
     $driftBlobEquality.hash(photo),
     photoBlobId,
     photoKey,
@@ -1221,6 +1264,7 @@ class Group extends DataClass implements Insertable<Group> {
           other.allowMemberPlace == this.allowMemberPlace &&
           other.allowOutsideArea == this.allowOutsideArea &&
           other.gpsLimitM == this.gpsLimitM &&
+          other.allowMemberTags == this.allowMemberTags &&
           $driftBlobEquality.equals(other.photo, this.photo) &&
           other.photoBlobId == this.photoBlobId &&
           other.photoKey == this.photoKey &&
@@ -1242,6 +1286,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
   final Value<bool> allowMemberPlace;
   final Value<bool> allowOutsideArea;
   final Value<int?> gpsLimitM;
+  final Value<bool> allowMemberTags;
   final Value<Uint8List?> photo;
   final Value<String?> photoBlobId;
   final Value<String?> photoKey;
@@ -1262,6 +1307,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.allowMemberPlace = const Value.absent(),
     this.allowOutsideArea = const Value.absent(),
     this.gpsLimitM = const Value.absent(),
+    this.allowMemberTags = const Value.absent(),
     this.photo = const Value.absent(),
     this.photoBlobId = const Value.absent(),
     this.photoKey = const Value.absent(),
@@ -1283,6 +1329,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.allowMemberPlace = const Value.absent(),
     this.allowOutsideArea = const Value.absent(),
     this.gpsLimitM = const Value.absent(),
+    this.allowMemberTags = const Value.absent(),
     this.photo = const Value.absent(),
     this.photoBlobId = const Value.absent(),
     this.photoKey = const Value.absent(),
@@ -1307,6 +1354,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Expression<bool>? allowMemberPlace,
     Expression<bool>? allowOutsideArea,
     Expression<int>? gpsLimitM,
+    Expression<bool>? allowMemberTags,
     Expression<Uint8List>? photo,
     Expression<String>? photoBlobId,
     Expression<String>? photoKey,
@@ -1328,6 +1376,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       if (allowMemberPlace != null) 'allow_member_place': allowMemberPlace,
       if (allowOutsideArea != null) 'allow_outside_area': allowOutsideArea,
       if (gpsLimitM != null) 'gps_limit_m': gpsLimitM,
+      if (allowMemberTags != null) 'allow_member_tags': allowMemberTags,
       if (photo != null) 'photo': photo,
       if (photoBlobId != null) 'photo_blob_id': photoBlobId,
       if (photoKey != null) 'photo_key': photoKey,
@@ -1351,6 +1400,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Value<bool>? allowMemberPlace,
     Value<bool>? allowOutsideArea,
     Value<int?>? gpsLimitM,
+    Value<bool>? allowMemberTags,
     Value<Uint8List?>? photo,
     Value<String?>? photoBlobId,
     Value<String?>? photoKey,
@@ -1372,6 +1422,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       allowMemberPlace: allowMemberPlace ?? this.allowMemberPlace,
       allowOutsideArea: allowOutsideArea ?? this.allowOutsideArea,
       gpsLimitM: gpsLimitM ?? this.gpsLimitM,
+      allowMemberTags: allowMemberTags ?? this.allowMemberTags,
       photo: photo ?? this.photo,
       photoBlobId: photoBlobId ?? this.photoBlobId,
       photoKey: photoKey ?? this.photoKey,
@@ -1423,6 +1474,9 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     if (gpsLimitM.present) {
       map['gps_limit_m'] = Variable<int>(gpsLimitM.value);
     }
+    if (allowMemberTags.present) {
+      map['allow_member_tags'] = Variable<bool>(allowMemberTags.value);
+    }
     if (photo.present) {
       map['photo'] = Variable<Uint8List>(photo.value);
     }
@@ -1460,6 +1514,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
           ..write('allowMemberPlace: $allowMemberPlace, ')
           ..write('allowOutsideArea: $allowOutsideArea, ')
           ..write('gpsLimitM: $gpsLimitM, ')
+          ..write('allowMemberTags: $allowMemberTags, ')
           ..write('photo: $photo, ')
           ..write('photoBlobId: $photoBlobId, ')
           ..write('photoKey: $photoKey, ')
@@ -5617,6 +5672,7 @@ typedef $$GroupsTableCreateCompanionBuilder =
       Value<bool> allowMemberPlace,
       Value<bool> allowOutsideArea,
       Value<int?> gpsLimitM,
+      Value<bool> allowMemberTags,
       Value<Uint8List?> photo,
       Value<String?> photoBlobId,
       Value<String?> photoKey,
@@ -5639,6 +5695,7 @@ typedef $$GroupsTableUpdateCompanionBuilder =
       Value<bool> allowMemberPlace,
       Value<bool> allowOutsideArea,
       Value<int?> gpsLimitM,
+      Value<bool> allowMemberTags,
       Value<Uint8List?> photo,
       Value<String?> photoBlobId,
       Value<String?> photoKey,
@@ -5779,6 +5836,11 @@ class $$GroupsTableFilterComposer
 
   ColumnFilters<int> get gpsLimitM => $composableBuilder(
     column: $table.gpsLimitM,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get allowMemberTags => $composableBuilder(
+    column: $table.allowMemberTags,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5957,6 +6019,11 @@ class $$GroupsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get allowMemberTags => $composableBuilder(
+    column: $table.allowMemberTags,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<Uint8List> get photo => $composableBuilder(
     column: $table.photo,
     builder: (column) => ColumnOrderings(column),
@@ -6044,6 +6111,11 @@ class $$GroupsTableAnnotationComposer
 
   GeneratedColumn<int> get gpsLimitM =>
       $composableBuilder(column: $table.gpsLimitM, builder: (column) => column);
+
+  GeneratedColumn<bool> get allowMemberTags => $composableBuilder(
+    column: $table.allowMemberTags,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<Uint8List> get photo =>
       $composableBuilder(column: $table.photo, builder: (column) => column);
@@ -6185,6 +6257,7 @@ class $$GroupsTableTableManager
                 Value<bool> allowMemberPlace = const Value.absent(),
                 Value<bool> allowOutsideArea = const Value.absent(),
                 Value<int?> gpsLimitM = const Value.absent(),
+                Value<bool> allowMemberTags = const Value.absent(),
                 Value<Uint8List?> photo = const Value.absent(),
                 Value<String?> photoBlobId = const Value.absent(),
                 Value<String?> photoKey = const Value.absent(),
@@ -6205,6 +6278,7 @@ class $$GroupsTableTableManager
                 allowMemberPlace: allowMemberPlace,
                 allowOutsideArea: allowOutsideArea,
                 gpsLimitM: gpsLimitM,
+                allowMemberTags: allowMemberTags,
                 photo: photo,
                 photoBlobId: photoBlobId,
                 photoKey: photoKey,
@@ -6227,6 +6301,7 @@ class $$GroupsTableTableManager
                 Value<bool> allowMemberPlace = const Value.absent(),
                 Value<bool> allowOutsideArea = const Value.absent(),
                 Value<int?> gpsLimitM = const Value.absent(),
+                Value<bool> allowMemberTags = const Value.absent(),
                 Value<Uint8List?> photo = const Value.absent(),
                 Value<String?> photoBlobId = const Value.absent(),
                 Value<String?> photoKey = const Value.absent(),
@@ -6247,6 +6322,7 @@ class $$GroupsTableTableManager
                 allowMemberPlace: allowMemberPlace,
                 allowOutsideArea: allowOutsideArea,
                 gpsLimitM: gpsLimitM,
+                allowMemberTags: allowMemberTags,
                 photo: photo,
                 photoBlobId: photoBlobId,
                 photoKey: photoKey,

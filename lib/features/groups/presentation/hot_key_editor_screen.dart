@@ -8,9 +8,17 @@ import 'package:flutter/material.dart';
 /// Add, rename, recolour and remove a group's hot-keys. Returns the edited
 /// list, or null if cancelled.
 class HotKeyEditorScreen extends StatefulWidget {
-  const HotKeyEditorScreen({required this.initial, super.key});
+  const HotKeyEditorScreen({
+    required this.initial,
+    this.editable = true,
+    super.key,
+  });
 
   final List<EditableHotKey> initial;
+
+  /// When false the screen only lists the tags: non-admins may view them but
+  /// an admin has kept tag editing to admins only.
+  final bool editable;
 
   @override
   State<HotKeyEditorScreen> createState() => _HotKeyEditorScreenState();
@@ -69,31 +77,42 @@ class _HotKeyEditorScreenState extends State<HotKeyEditorScreen> {
                             ),
                     ),
                     title: Text(hotKey.label),
-                    trailing: IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: AppColors.danger,
-                      ),
-                      onPressed: () => setState(() => _hotKeys.remove(hotKey)),
-                    ),
-                    onTap: () => _edit(existing: hotKey),
+                    trailing: widget.editable
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: AppColors.danger,
+                            ),
+                            onPressed: () =>
+                                setState(() => _hotKeys.remove(hotKey)),
+                          )
+                        : null,
+                    onTap: widget.editable
+                        ? () => _edit(existing: hotKey)
+                        : null,
                   ),
-                TextButton.icon(
-                  onPressed: _edit,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add tag'),
-                ),
+                if (widget.editable)
+                  TextButton.icon(
+                    onPressed: _edit,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add tag'),
+                  ),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: PrimaryButton(
-              label: 'Done',
-              onPressed: _hotKeys.isEmpty
-                  ? null
-                  : () => Navigator.of(context).pop(_hotKeys),
-            ),
+            child: widget.editable
+                ? PrimaryButton(
+                    label: 'Done',
+                    onPressed: _hotKeys.isEmpty
+                        ? null
+                        : () => Navigator.of(context).pop(_hotKeys),
+                  )
+                : PrimaryButton(
+                    label: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
           ),
         ],
       ),

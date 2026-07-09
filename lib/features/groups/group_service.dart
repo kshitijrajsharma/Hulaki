@@ -244,6 +244,7 @@ class GroupService {
         'allowMemberPlace': group.allowMemberPlace,
         'allowOutsideArea': group.allowOutsideArea,
         'gpsLimitM': group.gpsLimitM,
+        'allowMemberTags': group.allowMemberTags,
         'adminRootKey': group.adminRootKey,
         'creatorName': self?.displayName,
         'creatorAgreementKey': self?.agreementKey,
@@ -315,8 +316,8 @@ class GroupService {
     await _publishFullMeta(groupId);
   }
 
-  /// Sets or clears the group's mapping area (task area) and republishes, so
-  /// members converge on it and out-of-area enforcement uses the new shape.
+  /// Sets or clears the group's mapping area and republishes, so members
+  /// converge on it and out-of-area enforcement uses the new shape.
   Future<void> setMappingArea(String groupId, String? aoiGeoJson) async {
     await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
       GroupsCompanion(aoiGeoJson: Value(aoiGeoJson)),
@@ -521,7 +522,7 @@ class GroupService {
     await _publishFullMeta(groupId);
   }
 
-  /// Toggles whether points may be sent from outside the task area, and
+  /// Toggles whether points may be sent from outside the mapping area, and
   /// republishes.
   Future<void> setAllowOutsideArea(
     String groupId, {
@@ -538,6 +539,18 @@ class GroupService {
   Future<void> setGpsLimit(String groupId, int? meters) async {
     await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
       GroupsCompanion(gpsLimitM: Value(meters)),
+    );
+    await _publishFullMeta(groupId);
+  }
+
+  /// Toggles whether non-admins may add, edit and remove quick tags, and
+  /// republishes.
+  Future<void> setAllowMemberTags(
+    String groupId, {
+    required bool value,
+  }) async {
+    await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
+      GroupsCompanion(allowMemberTags: Value(value)),
     );
     await _publishFullMeta(groupId);
   }

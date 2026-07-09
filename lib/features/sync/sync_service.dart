@@ -103,7 +103,7 @@ class SyncService {
     final since = await db.cursorFor(groupId);
     final envelopes = await transport.fetchSince(groupId, since);
     for (final envelope in envelopes) {
-      await _ingest(envelope);
+      await _ingest(envelope, applyOwnMeta: true);
     }
   }
 
@@ -115,7 +115,7 @@ class SyncService {
     try {
       final envelopes = await transport.fetchSince(groupId, 0);
       for (final envelope in envelopes) {
-        await _ingest(envelope);
+        await _ingest(envelope, applyOwnMeta: true);
       }
     } finally {
       _markSyncing(groupId, active: false);
@@ -378,68 +378,83 @@ class SyncService {
     await db.deleteOutbox(entry.id);
   }
 
-  Future<void> _ingest(Envelope envelope) async {
+  Future<void> _ingest(Envelope envelope, {bool applyOwnMeta = false}) async {
     // Process (decrypt + persist) before advancing the cursor. If anything
     // throws, the cursor stays put so catch-up retries this envelope rather
     // than skipping it and losing the observation for good.
-    if (envelope.senderId != currentUserId) {
-      final key = await _groupKey(envelope.groupId);
-      if (key == null) return; // no key yet: retry later, do not advance.
+    final mine = envelope.senderId == currentUserId;
+    final key = await _groupKey(envelope.groupId);
+    if (key == null && !mine) return; // no key yet: retry, do not advance.
+    if (key != null) {
       final payload = MessagePayload.fromJson(
         await GroupCipher.decryptJson(envelope.ciphertext, key),
       );
-
-      if (payload.kind == MessageKind.groupMeta) {
+      final isMeta = payload.kind == MessageKind.groupMeta;
+      // Our own group-meta is reapplied only during catch-up, so a rejoined
+      // device restores its own settings and quick tags. Skipping it on the
+      // live subscription keeps a returning echo from clobbering fresh edits.
+      if (isMeta && (!mine || applyOwnMeta)) {
         await _applyGroupMeta(payload);
-      } else if (payload.kind == MessageKind.identityAnnounce) {
-        await _applyIdentityAnnounce(payload);
-      } else if (payload.kind == MessageKind.adminInvite ||
-          payload.kind == MessageKind.adminAccept) {
-        await _applyAdminEventPayload(payload, seq: envelope.seq);
-      } else {
-        final name = payload.senderName;
-        if (name != null && name.isNotEmpty) {
-          final existing = await db.profileById(envelope.senderId);
-          if (existing?.displayName != name) {
-            await db.upsertProfile(
-              ProfilesCompanion.insert(
-                id: envelope.senderId,
-                phone: '',
-                displayName: Value(name),
-              ),
-            );
-          }
-        }
-        await _recordMember(payload.groupId, envelope.senderId);
-        final mediaId = payload.mediaId;
-        if (mediaId != null &&
-            payload.mediaKeyB64 != null &&
-            await db.mediaBytes(mediaId) == null) {
-          final cipher = await blobStore.get(mediaId);
-          if (cipher != null) {
-            final clear = await GroupCipher.decryptBytes(
-              cipher,
-              base64Decode(payload.mediaKeyB64!),
-            );
-            await db
-                .into(db.mediaBlobs)
-                .insert(
-                  MediaBlobsCompanion.insert(
-                    id: mediaId,
-                    bytes: clear,
-                    mime: payload.mediaMime ?? 'application/octet-stream',
-                  ),
-                  mode: InsertMode.insertOrReplace,
-                );
-          }
-        }
-        await _applyLocal(payload, sendState: 'sent', remoteSeq: envelope.seq);
+      } else if (!mine && !isMeta) {
+        await _ingestFromOther(payload, envelope);
       }
     }
 
     final current = await db.cursorFor(envelope.groupId);
     if (envelope.seq > current) {
       await db.setCursor(envelope.groupId, envelope.seq);
+    }
+  }
+
+  /// Applies an envelope authored by another member: a control message, an
+  /// identity announce, or a chat observation with any referenced media blob.
+  Future<void> _ingestFromOther(
+    MessagePayload payload,
+    Envelope envelope,
+  ) async {
+    if (payload.kind == MessageKind.identityAnnounce) {
+      await _applyIdentityAnnounce(payload);
+    } else if (payload.kind == MessageKind.adminInvite ||
+        payload.kind == MessageKind.adminAccept) {
+      await _applyAdminEventPayload(payload, seq: envelope.seq);
+    } else {
+      final name = payload.senderName;
+      if (name != null && name.isNotEmpty) {
+        final existing = await db.profileById(envelope.senderId);
+        if (existing?.displayName != name) {
+          await db.upsertProfile(
+            ProfilesCompanion.insert(
+              id: envelope.senderId,
+              phone: '',
+              displayName: Value(name),
+            ),
+          );
+        }
+      }
+      await _recordMember(payload.groupId, envelope.senderId);
+      final mediaId = payload.mediaId;
+      if (mediaId != null &&
+          payload.mediaKeyB64 != null &&
+          await db.mediaBytes(mediaId) == null) {
+        final cipher = await blobStore.get(mediaId);
+        if (cipher != null) {
+          final clear = await GroupCipher.decryptBytes(
+            cipher,
+            base64Decode(payload.mediaKeyB64!),
+          );
+          await db
+              .into(db.mediaBlobs)
+              .insert(
+                MediaBlobsCompanion.insert(
+                  id: mediaId,
+                  bytes: clear,
+                  mime: payload.mediaMime ?? 'application/octet-stream',
+                ),
+                mode: InsertMode.insertOrReplace,
+              );
+        }
+      }
+      await _applyLocal(payload, sendState: 'sent', remoteSeq: envelope.seq);
     }
   }
 
@@ -514,6 +529,9 @@ class SyncService {
               meta['allowOutsideArea'] as bool? ?? true,
             ),
             gpsLimitM: Value((meta['gpsLimitM'] as num?)?.toInt()),
+            allowMemberTags: Value(
+              meta['allowMemberTags'] as bool? ?? false,
+            ),
           ),
           onConflict: DoUpdate(
             (_) => GroupsCompanion(
@@ -535,6 +553,9 @@ class SyncService {
                 meta['allowOutsideArea'] as bool? ?? true,
               ),
               gpsLimitM: Value((meta['gpsLimitM'] as num?)?.toInt()),
+              allowMemberTags: Value(
+                meta['allowMemberTags'] as bool? ?? false,
+              ),
             ),
           ),
         );

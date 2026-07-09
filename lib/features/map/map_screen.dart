@@ -88,8 +88,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _satellite = false;
   String? _aoiGeoJson;
   bool _canPlace = true;
-  bool _outsideAoi = false;
-  bool _aoiInView = false;
+  bool _dataInView = true;
   LatLng? _lastLocation;
   bool _pendingInitialCenter = false;
   List<Message> _pointMessages = const [];
@@ -137,9 +136,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  /// Records the latest fix for the recenter button and flags whether it sits
-  /// outside the task area. Fed by both the position stream and the map's own
-  /// location puck, so it holds whichever reports first.
+  /// Records the latest fix for the recenter button. Fed by both the position
+  /// stream and the map's own location puck, so it holds whichever reports
+  /// first.
   void _updateLocation(double lat, double lng) {
     _lastLocation = LatLng(lat, lng);
     // The first fix after opening recenters on the user, so the map lands where
@@ -152,35 +151,50 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ),
       );
     }
-    final aoi = _aoiGeoJson;
-    if (aoi == null) return;
-    final outside = !pointInAoi(aoi, lat, lng);
-    if (outside != _outsideAoi && mounted) {
-      setState(() => _outsideAoi = outside);
-    }
   }
 
-  /// Tracks whether the task area is currently within the map viewport, so the
-  /// "zoom to task area" prompt hides once the area is on screen.
+  /// Tracks whether the data to frame (the mapping area, else the points) is
+  /// within the viewport, so the "zoom" prompt hides once it is on screen.
   Future<void> _onCameraIdle() async {
-    final aoi = _aoiGeoJson;
     final controller = _controller;
-    if (aoi == null || controller == null) return;
-    final bounds = aoiBounds(aoi);
-    if (bounds == null) return;
+    if (controller == null) return;
+    final bounds = _dataBounds();
     final view = await controller.getVisibleRegion();
-    final inView = _boundsIntersect(view, bounds);
-    if (inView != _aoiInView && mounted) {
-      setState(() => _aoiInView = inView);
+    final inView = bounds == null || _boundsIntersect(view, bounds);
+    if (inView != _dataInView && mounted) {
+      setState(() => _dataInView = inView);
     }
   }
 
-  /// Whether the area box [minLng, minLat, maxLng, maxLat] overlaps [view].
-  bool _boundsIntersect(LatLngBounds view, List<double> aoi) {
-    return !(aoi[2] < view.southwest.longitude ||
-        aoi[0] > view.northeast.longitude ||
-        aoi[3] < view.southwest.latitude ||
-        aoi[1] > view.northeast.latitude);
+  /// The box to frame: the mapping area if the group has one, else the extent
+  /// of the points on the map. Null when there is neither.
+  List<double>? _dataBounds() {
+    final aoi = _aoiGeoJson;
+    if (aoi != null) return aoiBounds(aoi);
+    var minLng = 180.0;
+    var minLat = 90.0;
+    var maxLng = -180.0;
+    var maxLat = -90.0;
+    var any = false;
+    for (final m in _pointMessages) {
+      final lat = m.lat;
+      final lng = m.lng;
+      if (lat == null || lng == null) continue;
+      any = true;
+      if (lng < minLng) minLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lng > maxLng) maxLng = lng;
+      if (lat > maxLat) maxLat = lat;
+    }
+    return any ? [minLng, minLat, maxLng, maxLat] : null;
+  }
+
+  /// Whether the box [minLng, minLat, maxLng, maxLat] overlaps [view].
+  bool _boundsIntersect(LatLngBounds view, List<double> box) {
+    return !(box[2] < view.southwest.longitude ||
+        box[0] > view.northeast.longitude ||
+        box[3] < view.southwest.latitude ||
+        box[1] > view.northeast.latitude);
   }
 
   /// Centers the camera on the latest known location, if any.
@@ -260,13 +274,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
           ),
-          if (_outsideAoi && !_aoiInView)
+          if (!_dataInView)
             Positioned(
               left: 0,
               right: 0,
               bottom: _legend.isEmpty ? 44 : 70,
               child: Center(
-                child: _ZoomToAreaPill(onTap: () => unawaited(_frameAoi())),
+                child: _ZoomToAreaPill(
+                  label: _aoiGeoJson != null
+                      ? 'Zoom to mapping area'
+                      : 'Zoom to points',
+                  onTap: () => unawaited(_frameData()),
+                ),
               ),
             ),
           if (_legend.isNotEmpty)
@@ -403,6 +422,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ),
     );
     _sourcesReady = true;
+    // Seeding the source inline at add time does not always paint the pins on
+    // the first frame, so push the collection once more now that the layers
+    // and pin images exist.
+    await _refreshPins();
 
     // Framing and the focused-point sheet belong to the first load only. A
     // basemap toggle reloads the style and must not reopen the sheet or move
@@ -461,13 +484,46 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  /// Frames the group's task area, if it has one.
+  /// Frames the group's mapping area, if it has one.
   Future<void> _frameAoi() async {
     final aoi = _aoiGeoJson;
     if (aoi == null) return;
     final bounds = aoiBounds(aoi);
     if (bounds == null) return;
     await _controller?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(bounds[1], bounds[0]),
+          northeast: LatLng(bounds[3], bounds[2]),
+        ),
+        left: 40,
+        right: 40,
+        top: 140,
+        bottom: 40,
+      ),
+    );
+  }
+
+  /// Frames the mapping area if the group has one, else the extent of the
+  /// points on the map. Backs the "zoom" prompt when data is off screen.
+  Future<void> _frameData() async {
+    if (_aoiGeoJson != null) {
+      await _frameAoi();
+      return;
+    }
+    final bounds = _dataBounds();
+    final controller = _controller;
+    if (bounds == null || controller == null) return;
+    if (bounds[2] - bounds[0] < 0.002 && bounds[3] - bounds[1] < 0.002) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng((bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2),
+          16,
+        ),
+      );
+      return;
+    }
+    await controller.animateCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: LatLng(bounds[1], bounds[0]),
@@ -704,6 +760,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
       return;
     }
+    if (layerId == 'aoi-fill') {
+      unawaited(_onMapTapped(coordinates));
+      return;
+    }
     if (layerId != 'points-symbols') return;
     final index = int.tryParse(id);
     if (index == null || index < 0 || index >= _pointMessages.length) return;
@@ -763,11 +823,12 @@ class _RecenterButton extends StatelessWidget {
   }
 }
 
-/// Shown centered near the thumb when the user is outside the task area and it
-/// has scrolled off screen: taps back to frame it.
+/// Shown centered near the thumb when the data to frame has scrolled off
+/// screen: taps back to frame the mapping area or the points.
 class _ZoomToAreaPill extends StatelessWidget {
-  const _ZoomToAreaPill({required this.onTap});
+  const _ZoomToAreaPill({required this.label, required this.onTap});
 
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -779,16 +840,16 @@ class _ZoomToAreaPill extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.crop_free, size: 18, color: AppColors.amber),
-              SizedBox(width: 8),
+              const Icon(Icons.crop_free, size: 18, color: AppColors.amber),
+              const SizedBox(width: 8),
               Text(
-                'Zoom to mapping area',
-                style: TextStyle(
+                label,
+                style: const TextStyle(
                   color: AppColors.ink,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -891,10 +952,10 @@ class _LegendBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.white.withValues(alpha: 0.96),
-      child: SafeArea(
-        top: false,
+    return SafeArea(
+      top: false,
+      child: Material(
+        color: AppColors.white.withValues(alpha: 0.96),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           child: SizedBox(

@@ -36,8 +36,9 @@ class Groups extends Table {
   /// Moderation controls, all set by an admin and shared through group-meta.
   /// [allowMemberExport] lets non-admins export; [allowMemberPlace] lets them
   /// place points by tapping the map rather than only sending their live fix;
-  /// [allowOutsideArea] permits points beyond the task area; [gpsLimitM] caps
-  /// the accuracy a sent fix may carry, in metres, null meaning no cap.
+  /// [allowOutsideArea] permits points beyond the mapping area; [gpsLimitM]
+  /// caps the accuracy a sent fix may carry, in metres, null meaning no cap;
+  /// [allowMemberTags] lets non-admins add, edit and remove the quick tags.
   BoolColumn get allowMemberExport =>
       boolean().withDefault(const Constant(false))();
   BoolColumn get allowMemberPlace =>
@@ -45,6 +46,8 @@ class Groups extends Table {
   BoolColumn get allowOutsideArea =>
       boolean().withDefault(const Constant(true))();
   IntColumn get gpsLimitM => integer().nullable()();
+  BoolColumn get allowMemberTags =>
+      boolean().withDefault(const Constant(false))();
 
   BlobColumn get photo => blob().nullable()();
 
@@ -203,7 +206,7 @@ class LocalDatabase extends _$LocalDatabase {
     : super(executor ?? driftDatabase(name: 'fieldchat'));
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -248,6 +251,9 @@ class LocalDatabase extends _$LocalDatabase {
       if (from < 11) {
         await m.addColumn(groups, groups.photoBlobId);
         await m.addColumn(groups, groups.photoKey);
+      }
+      if (from < 12) {
+        await m.addColumn(groups, groups.allowMemberTags);
       }
     },
   );

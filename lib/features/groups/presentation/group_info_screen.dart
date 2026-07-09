@@ -152,10 +152,18 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
         _reload();
       });
 
+  Future<void> _setAllowMemberTags(String groupId, bool value) =>
+      _guard(() async {
+        await ref
+            .read(groupServiceProvider)
+            .setAllowMemberTags(groupId, value: value);
+        _reload();
+      });
+
   /// Picks the accuracy cap for sent points. Off clears it; the presets bound
   /// the metres a fix may carry before a send is refused.
   Future<void> _editGpsLimit(String groupId, int? current) async {
-    const presets = <int?>[null, 10, 20, 50];
+    const presets = <int?>[null, 5, 10, 15, 20];
     final chosen = await showDialog<int>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
@@ -443,7 +451,12 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                 canEditArea: iAmAdmin,
                 hasArea: group.aoiGeoJson != null,
                 onEditArea: () => unawaited(_editMappingArea(group.id)),
-                onEditHotKeys: () => _editHotKeys(context, ref, group.id),
+                onEditHotKeys: () => _editHotKeys(
+                  context,
+                  ref,
+                  group.id,
+                  editable: iAmAdmin || group.allowMemberTags,
+                ),
                 onMakeOffline: () => _makeOffline(group),
                 onExport: () => showModalBottomSheet<void>(
                   context: context,
@@ -465,6 +478,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                   allowMemberExport: group.allowMemberExport,
                   allowMemberPlace: group.allowMemberPlace,
                   allowOutsideArea: group.allowOutsideArea,
+                  allowMemberTags: group.allowMemberTags,
                   gpsLimitM: group.gpsLimitM,
                   onToggleApproval: (value) =>
                       unawaited(_setJoinApproval(group.id, value)),
@@ -474,6 +488,8 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                       unawaited(_setAllowMemberPlace(group.id, value)),
                   onToggleOutsideArea: (value) =>
                       unawaited(_setAllowOutsideArea(group.id, value)),
+                  onToggleMemberTags: (value) =>
+                      unawaited(_setAllowMemberTags(group.id, value)),
                   onEditGpsLimit: () =>
                       unawaited(_editGpsLimit(group.id, group.gpsLimitM)),
                 ),
@@ -519,8 +535,9 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
 Future<void> _editHotKeys(
   BuildContext context,
   WidgetRef ref,
-  String groupId,
-) async {
+  String groupId, {
+  required bool editable,
+}) async {
   final rows = await ref.read(databaseProvider).hotKeysFor(groupId);
   final initial = [
     for (final row in rows)
@@ -534,7 +551,7 @@ Future<void> _editHotKeys(
   if (!context.mounted) return;
   final result = await Navigator.of(context).push<List<EditableHotKey>>(
     MaterialPageRoute<List<EditableHotKey>>(
-      builder: (_) => HotKeyEditorScreen(initial: initial),
+      builder: (_) => HotKeyEditorScreen(initial: initial, editable: editable),
     ),
   );
   if (result == null) return;
@@ -706,7 +723,8 @@ class _EditableIdentityState extends State<_EditableIdentity> {
 }
 
 /// Admin-only group controls that shape what members may do: join approval,
-/// export, map placement, task-area enforcement, and the accuracy cap.
+/// export, map placement, mapping-area enforcement, tag editing, and the
+/// accuracy cap.
 class _ModerationCard extends StatelessWidget {
   const _ModerationCard({
     required this.isPublic,
@@ -715,11 +733,13 @@ class _ModerationCard extends StatelessWidget {
     required this.allowMemberExport,
     required this.allowMemberPlace,
     required this.allowOutsideArea,
+    required this.allowMemberTags,
     required this.gpsLimitM,
     required this.onToggleApproval,
     required this.onToggleMemberExport,
     required this.onToggleMemberPlace,
     required this.onToggleOutsideArea,
+    required this.onToggleMemberTags,
     required this.onEditGpsLimit,
   });
 
@@ -729,11 +749,13 @@ class _ModerationCard extends StatelessWidget {
   final bool allowMemberExport;
   final bool allowMemberPlace;
   final bool allowOutsideArea;
+  final bool allowMemberTags;
   final int? gpsLimitM;
   final ValueChanged<bool> onToggleApproval;
   final ValueChanged<bool> onToggleMemberExport;
   final ValueChanged<bool> onToggleMemberPlace;
   final ValueChanged<bool> onToggleOutsideArea;
+  final ValueChanged<bool> onToggleMemberTags;
   final VoidCallback onEditGpsLimit;
 
   @override
@@ -805,6 +827,18 @@ class _ModerationCard extends StatelessWidget {
                   'live GPS point'),
               value: allowMemberPlace,
               onChanged: onToggleMemberPlace,
+            ),
+            const Divider(height: 1),
+            SwitchListTile(
+              secondary: const Icon(
+                Icons.label_outline,
+                color: AppColors.ink,
+              ),
+              title: const Text('Allow everyone to add or delete tags'),
+              subtitle: const Text('Off means only admins change the quick '
+                  'tags'),
+              value: allowMemberTags,
+              onChanged: onToggleMemberTags,
             ),
             if (hasArea) ...[
               const Divider(height: 1),
@@ -1455,8 +1489,8 @@ class _ManageCard extends StatelessWidget {
                 title: Text(hasArea ? 'Edit mapping area' : 'Set mapping area'),
                 subtitle: Text(
                   hasArea
-                      ? 'Redraw the task area on the map'
-                      : 'Draw the task area on the map',
+                      ? 'Redraw the mapping area on the map'
+                      : 'Draw the mapping area on the map',
                 ),
                 trailing: const Icon(
                   Icons.chevron_right,
