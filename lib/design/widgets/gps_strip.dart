@@ -5,8 +5,46 @@ import 'package:fieldchat/design/app_spacing.dart';
 import 'package:flutter/material.dart';
 
 /// The quality tier a live accuracy reading falls into. Thresholds in metres:
-/// excellent <= 5, good <= 10, weak <= 15, poor above that.
-enum _GpsTier { acquiring, poor, weak, good, excellent }
+/// excellent <= 5, good <= 10, weak <= 15, poor above that. Shared so the live
+/// strip, message bubbles and point detail colour accuracy the same way.
+enum GpsTier { acquiring, poor, weak, good, excellent }
+
+/// The tier an accuracy in metres falls into; null reads as still acquiring.
+GpsTier gpsTierFor(double? accuracyMeters) {
+  final m = accuracyMeters;
+  if (m == null) return GpsTier.acquiring;
+  if (m <= 5) return GpsTier.excellent;
+  if (m <= 10) return GpsTier.good;
+  if (m <= 15) return GpsTier.weak;
+  return GpsTier.poor;
+}
+
+/// The colour, label and filled-bar count that read as a tier's signal quality.
+extension GpsTierStyle on GpsTier {
+  Color get color => switch (this) {
+    GpsTier.acquiring => AppColors.textMuted,
+    GpsTier.excellent => AppColors.gpsStrong,
+    GpsTier.good => AppColors.gpsGood,
+    GpsTier.weak => AppColors.amber,
+    GpsTier.poor => AppColors.danger,
+  };
+
+  String get label => switch (this) {
+    GpsTier.acquiring => 'Locating GPS…',
+    GpsTier.excellent => 'Excellent',
+    GpsTier.good => 'Good',
+    GpsTier.weak => 'Weak',
+    GpsTier.poor => 'Poor',
+  };
+
+  int get bars => switch (this) {
+    GpsTier.acquiring => 0,
+    GpsTier.poor => 1,
+    GpsTier.weak => 2,
+    GpsTier.good => 3,
+    GpsTier.excellent => 4,
+  };
+}
 
 /// A compact live GPS readout: a pulsing dot that beats on each new fix, four
 /// signal bars whose filled count and colour track accuracy, a label, and the
@@ -70,19 +108,12 @@ class _GpsStripState extends State<GpsStrip>
     ),
   ]).animate(_pulse);
 
-  _GpsTier get _tier {
-    final m = widget.accuracyMeters;
-    if (m == null) return _GpsTier.acquiring;
-    if (m <= 5) return _GpsTier.excellent;
-    if (m <= 10) return _GpsTier.good;
-    if (m <= 15) return _GpsTier.weak;
-    return _GpsTier.poor;
-  }
+  GpsTier get _tier => gpsTierFor(widget.accuracyMeters);
 
   @override
   void didUpdateWidget(GpsStrip oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_tier != _GpsTier.acquiring && widget.pulseKey != oldWidget.pulseKey) {
+    if (_tier != GpsTier.acquiring && widget.pulseKey != oldWidget.pulseKey) {
       unawaited(_pulse.forward(from: 0));
     }
   }
@@ -96,32 +127,10 @@ class _GpsStripState extends State<GpsStrip>
   @override
   Widget build(BuildContext context) {
     final tier = _tier;
-    final Color tone;
-    final String label;
-    final int level;
-    switch (tier) {
-      case _GpsTier.acquiring:
-        tone = AppColors.textMuted;
-        label = 'Locating GPS…';
-        level = 0;
-      case _GpsTier.excellent:
-        tone = AppColors.gpsStrong;
-        label = 'Excellent';
-        level = 4;
-      case _GpsTier.good:
-        tone = AppColors.gpsGood;
-        label = 'Good';
-        level = 3;
-      case _GpsTier.weak:
-        tone = AppColors.amber;
-        label = 'Weak';
-        level = 2;
-      case _GpsTier.poor:
-        tone = AppColors.danger;
-        label = 'Poor';
-        level = 1;
-    }
-    final acquiring = tier == _GpsTier.acquiring;
+    final tone = tier.color;
+    final label = tier.label;
+    final level = tier.bars;
+    final acquiring = tier == GpsTier.acquiring;
 
     return InkWell(
       onTap: widget.onTap,

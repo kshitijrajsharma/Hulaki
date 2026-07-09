@@ -734,7 +734,7 @@ class _HotKeyBar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showMore) ...[
-            _MoreTagsPill(onTap: () => unawaited(_pickTag(context))),
+            _MoreTagsHandle(onOpen: () => unawaited(_pickTag(context))),
             const SizedBox(height: 6),
           ],
           SizedBox(
@@ -773,26 +773,51 @@ class _HotKeyBar extends StatelessWidget {
   }
 }
 
-/// The small pill that floats above the tag row when there are many tags.
-class _MoreTagsPill extends StatelessWidget {
-  const _MoreTagsPill({required this.onTap});
+/// A slim grabber above the tag row when there are many tags. Drag it up or tap
+/// it to open the full tag drawer, which drags back down to close.
+class _MoreTagsHandle extends StatefulWidget {
+  const _MoreTagsHandle({required this.onOpen});
 
-  final VoidCallback onTap;
+  final VoidCallback onOpen;
+
+  @override
+  State<_MoreTagsHandle> createState() => _MoreTagsHandleState();
+}
+
+class _MoreTagsHandleState extends State<_MoreTagsHandle> {
+  double _dragY = 0;
+  bool _opened = false;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.field,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-          child: Icon(
-            Icons.keyboard_arrow_up,
-            size: 20,
-            color: AppColors.ink,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onOpen,
+      onVerticalDragStart: (_) {
+        _dragY = 0;
+        _opened = false;
+      },
+      onVerticalDragUpdate: (details) {
+        _dragY += details.delta.dy;
+        if (!_opened && _dragY < -12) {
+          _opened = true;
+          widget.onOpen();
+        }
+      },
+      onVerticalDragEnd: (details) {
+        if (!_opened && (details.primaryVelocity ?? 0) < -100) {
+          widget.onOpen();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 9),
+        color: Colors.transparent,
+        child: Container(
+          width: 44,
+          height: 5,
+          decoration: BoxDecoration(
+            color: AppColors.textFaint,
+            borderRadius: BorderRadius.circular(2.5),
           ),
         ),
       ),

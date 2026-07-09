@@ -81,3 +81,45 @@ Future<Uint8List> buildPinImage({
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   return data!.buffer.asUint8List();
 }
+
+/// Renders a heading cone: a soft wedge in [color] that fades out from the
+/// point, drawn beneath the pin and rotated to the bearing by the symbol layer.
+/// Its apex sits at the bottom-centre so it shares the pin's anchor, so the
+/// beam fans from the point while the pin and its icon stay untouched.
+Future<Uint8List> buildHeadingConeImage({
+  required Color color,
+  double logicalSize = 54,
+  double pixelRatio = 3,
+}) async {
+  final size = logicalSize * pixelRatio;
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+
+  final apex = Offset(size / 2, size);
+  final radius = size * 0.94;
+  const halfSpread = 32 * math.pi / 180;
+  const start = -math.pi / 2 - halfSpread;
+
+  final wedge = Path()
+    ..moveTo(apex.dx, apex.dy)
+    ..arcTo(
+      Rect.fromCircle(center: apex, radius: radius),
+      start,
+      2 * halfSpread,
+      false,
+    )
+    ..close();
+
+  final shader = ui.Gradient.radial(apex, radius, [
+    color.withValues(alpha: 0.55),
+    color.withValues(alpha: 0),
+  ], [0, 1]);
+  canvas.drawPath(wedge, Paint()..shader = shader);
+
+  final image = await recorder.endRecording().toImage(
+    size.ceil(),
+    size.ceil(),
+  );
+  final data = await image.toByteData(format: ui.ImageByteFormat.png);
+  return data!.buffer.asUint8List();
+}

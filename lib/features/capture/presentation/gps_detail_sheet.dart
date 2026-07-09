@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fieldchat/app/providers.dart';
 import 'package:fieldchat/design/app_colors.dart';
 import 'package:fieldchat/design/app_spacing.dart';
+import 'package:fieldchat/design/widgets/gps_strip.dart';
 import 'package:fieldchat/features/capture/utm.dart';
 import 'package:fieldchat/features/settings/units.dart';
 import 'package:flutter/material.dart';
@@ -154,8 +155,9 @@ class _QualityBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strong = accuracyM <= 15;
-    final tone = strong ? AppColors.gpsStrong : AppColors.amber;
+    final tier = gpsTierFor(accuracyM);
+    final tone = tier.color;
+    final fixed = tier == GpsTier.excellent || tier == GpsTier.good;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -170,14 +172,14 @@ class _QualityBanner extends StatelessWidget {
           ScaleTransition(
             scale: pulse,
             child: Icon(
-              strong ? Icons.gps_fixed : Icons.gps_not_fixed,
+              fixed ? Icons.gps_fixed : Icons.gps_not_fixed,
               size: 18,
               color: tone,
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            strong ? 'GPS strong' : 'GPS weak',
+            tier.label,
             style: TextStyle(fontWeight: FontWeight.w700, color: tone),
           ),
           const Spacer(),

@@ -221,6 +221,21 @@ class SyncService {
     await _enqueuePayload(_payloadFromRow(updated!));
   }
 
+  /// Re-tags a point, or clears its tag when [tagId] is null, and propagates
+  /// the change like an edit so every member re-colours the marker.
+  Future<void> setMessageTag({
+    required String messageId,
+    required String? tagId,
+  }) async {
+    final row = await _rowById(messageId);
+    if (row == null) return;
+    await (db.update(db.messages)..where((m) => m.id.equals(messageId))).write(
+      MessagesCompanion(tagId: Value(tagId), editedAt: Value(DateTime.now())),
+    );
+    final updated = await _rowById(messageId);
+    await _enqueuePayload(_payloadFromRow(updated!));
+  }
+
   Future<void> deleteMessage(String messageId) async {
     final row = await _rowById(messageId);
     if (row == null) return;

@@ -43,8 +43,33 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
   bool _caching = false;
   bool _saving = false;
 
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshPublicListing());
+  }
+
   Future<Group?> _loadGroup() =>
       ref.read(databaseProvider).groupById(widget.groupId);
+
+  /// When an admin opens a public group, republishes its directory listing so
+  /// the nearby preview reflects points and tags added since it was last
+  /// published, instead of a stale "no one has added points yet".
+  Future<void> _refreshPublicListing() async {
+    final group = await ref.read(databaseProvider).groupById(widget.groupId);
+    if (!mounted || group == null || !group.isPublic) return;
+    final selfId = ref.read(currentUserIdProvider);
+    final members = await ref.read(
+      groupMembersProvider(widget.groupId).future,
+    );
+    if (!mounted ||
+        !members.any((m) => m.profileId == selfId && m.isAdmin)) {
+      return;
+    }
+    final center = await _groupCenter(widget.groupId, group.aoiGeoJson);
+    if (!mounted || center == null) return;
+    await _publishToDirectory(group, center);
+  }
 
   /// Runs a group mutation while showing the top progress bar, so a save that
   /// waits on the network reads as working rather than stuck.

@@ -4,6 +4,7 @@ import 'package:fieldchat/core/time_format.dart';
 import 'package:fieldchat/data/local/database.dart';
 import 'package:fieldchat/design/app_colors.dart';
 import 'package:fieldchat/design/app_spacing.dart';
+import 'package:fieldchat/design/widgets/gps_strip.dart';
 import 'package:flutter/material.dart';
 
 typedef MediaResolver = Future<Uint8List?> Function(String mediaId);
@@ -245,9 +246,7 @@ class _MetaRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: message.accuracyM! <= 15
-                  ? AppColors.gpsStrong
-                  : AppColors.amber,
+              color: gpsTierFor(message.accuracyM).color,
             ),
           )
         else if (message.lat != null)

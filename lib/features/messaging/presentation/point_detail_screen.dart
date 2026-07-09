@@ -6,6 +6,7 @@ import 'package:fieldchat/data/local/database.dart';
 import 'package:fieldchat/data/local/database_provider.dart';
 import 'package:fieldchat/design/app_colors.dart';
 import 'package:fieldchat/design/app_spacing.dart';
+import 'package:fieldchat/design/widgets/gps_strip.dart';
 import 'package:fieldchat/features/export/geojson.dart';
 import 'package:fieldchat/features/groups/group_member_view.dart';
 import 'package:fieldchat/features/groups/hot_key_icons.dart';
@@ -155,12 +156,64 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
     await sync.deleteMessage(widget.message.id);
   }
 
+  Future<void> _editText(Message message) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (_) => _EditNoteDialog(initial: message.body ?? ''),
+    );
+    if (result == null || result.trim().isEmpty) return;
+    await ref
+        .read(syncServiceProvider)
+        .editMessage(messageId: message.id, newBody: result.trim());
+  }
+
+  Future<void> _editTag(Message message, List<HotKey> hotKeys) async {
+    final chosen = await showModalBottomSheet<_TagChoice>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RetagSheet(hotKeys: hotKeys, selectedId: message.tagId),
+    );
+    if (chosen == null) return;
+    await ref
+        .read(syncServiceProvider)
+        .setMessageTag(messageId: message.id, tagId: chosen.tagId);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final message = widget.message;
+    // Resolve the point and its tag from the live streams so an edit made here
+    // (text or tag) redraws this screen at once. Selecting just this message
+    // keeps the mini-map from rebuilding when unrelated points sync in.
+    final message = ref.watch(
+      messagesProvider(widget.groupId).select((async) {
+        final list = async.asData?.value;
+        if (list != null) {
+          for (final m in list) {
+            if (m.id == widget.message.id) return m;
+          }
+        }
+        return widget.message;
+      }),
+    );
+    final hotKeys =
+        ref.watch(hotKeysProvider(widget.groupId)).asData?.value ??
+        const <HotKey>[];
+    HotKey? tag;
+    if (message.tagId != null) {
+      for (final h in hotKeys) {
+        if (h.id == message.tagId) {
+          tag = h;
+          break;
+        }
+      }
+    }
+    final tagLabel = tag?.label ?? widget.tagLabel;
+    final tagColor = tag != null ? Color(tag.colorValue) : widget.tagColor;
+    final glyph = hotKeyIcon(tag?.iconName ?? widget.tagIcon);
+
     final accuracy = message.accuracyM;
+    final accuracyTier = accuracy == null ? null : gpsTierFor(accuracy);
     final located = message.lat != null && message.lng != null;
-    final glyph = hotKeyIcon(widget.tagIcon);
     final resolver = widget.mediaResolver;
     final names =
         ref.watch(profileNamesProvider).asData?.value ??
@@ -180,14 +233,19 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
         ref.watch(groupMembersProvider(widget.groupId)).asData?.value ??
         const <GroupMemberView>[];
     final iAmAdmin = members.any((m) => m.profileId == selfId && m.isAdmin);
-    final canDelete = message.senderId == selfId || iAmAdmin;
+    final canEdit = message.senderId == selfId || iAmAdmin;
 
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
         title: const Text('Point detail'),
         actions: [
-          if (canDelete)
+          if (canEdit)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => unawaited(_editText(message)),
+            ),
+          if (canEdit)
             IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: () => unawaited(_confirmDelete()),
@@ -220,33 +278,19 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (widget.tagLabel != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: widget.tagColor ?? AppColors.ink,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (glyph != null) ...[
-                          Icon(glyph, size: 13, color: AppColors.white),
-                          const SizedBox(width: 5),
-                        ],
-                        Text(
-                          widget.tagLabel!,
-                          style: const TextStyle(
-                            color: AppColors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
+                if (tagLabel != null)
+                  _TagChip(
+                    label: tagLabel,
+                    color: tagColor ?? AppColors.ink,
+                    glyph: glyph,
+                    editable: canEdit,
+                    onTap: canEdit
+                        ? () => unawaited(_editTag(message, hotKeys))
+                        : null,
+                  )
+                else if (canEdit)
+                  _AddTagChip(
+                    onTap: () => unawaited(_editTag(message, hotKeys)),
                   ),
                 if (message.body != null) ...[
                   const SizedBox(height: AppSpacing.md),
@@ -310,8 +354,9 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
                         : '${message.lat?.toStringAsFixed(5)}, '
                               '${message.lng?.toStringAsFixed(5)}',
                     trailing: accuracy != null
-                        ? '±${accuracy.round()} m'
+                        ? '${accuracyTier!.label} · ±${accuracy.round()} m'
                         : (located ? 'Placed on map' : null),
+                    trailingColor: accuracyTier?.color,
                     action: located ? Icons.copy : null,
                   ),
                 ),
@@ -397,12 +442,14 @@ class _MetaRow extends StatelessWidget {
     required this.icon,
     required this.label,
     this.trailing,
+    this.trailingColor,
     this.action,
   });
 
   final IconData icon;
   final String label;
   final String? trailing;
+  final Color? trailingColor;
   final IconData? action;
 
   @override
@@ -424,10 +471,10 @@ class _MetaRow extends StatelessWidget {
           if (trailing != null)
             Text(
               trailing!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppColors.gpsStrong,
+                color: trailingColor ?? AppColors.gpsStrong,
               ),
             ),
         ],
@@ -487,6 +534,226 @@ class _SentRowState extends State<_SentRow> {
     return InkWell(
       onTap: () => setState(() => _exact = !_exact),
       child: _MetaRow(icon: Icons.schedule, label: 'Sent $label'),
+    );
+  }
+}
+
+/// Edits a point's note. Owns its text controller so it is disposed with the
+/// dialog, not mid-animation, which would trip a framework assertion.
+class _EditNoteDialog extends StatefulWidget {
+  const _EditNoteDialog({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_EditNoteDialog> createState() => _EditNoteDialogState();
+}
+
+class _EditNoteDialogState extends State<_EditNoteDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit note'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLines: null,
+        decoration: const InputDecoration(
+          hintText: 'Describe this point',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+/// The point's tag as a coloured chip. When editable it is tappable to re-tag
+/// and carries a small pencil to signal that.
+class _TagChip extends StatelessWidget {
+  const _TagChip({
+    required this.label,
+    required this.color,
+    this.glyph,
+    this.editable = false,
+    this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final IconData? glyph;
+  final bool editable;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(13),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(13),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (glyph != null) ...[
+                Icon(glyph, size: 13, color: AppColors.white),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (editable) ...[
+                const SizedBox(width: 5),
+                const Icon(Icons.edit, size: 12, color: AppColors.white),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A dashed placeholder for tagging an untagged point you are allowed to edit.
+class _AddTagChip extends StatelessWidget {
+  const _AddTagChip({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(13),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: AppColors.mist),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add, size: 14, color: AppColors.textMuted),
+            SizedBox(width: 4),
+            Text(
+              'Add tag',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The picked tag returned from [_RetagSheet]; a null [tagId] clears the tag.
+class _TagChoice {
+  const _TagChoice(this.tagId);
+
+  final String? tagId;
+}
+
+/// A drawer to change a point's tag: every quick tag plus a clear option.
+class _RetagSheet extends StatelessWidget {
+  const _RetagSheet({required this.hotKeys, required this.selectedId});
+
+  final List<HotKey> hotKeys;
+  final String? selectedId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.mist,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 14, 20, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Change tag',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            for (final hotKey in hotKeys)
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Color(hotKey.colorValue),
+                  child: Icon(
+                    hotKeyIcon(hotKey.iconName) ?? Icons.label,
+                    size: 14,
+                    color: AppColors.white,
+                  ),
+                ),
+                title: Text(hotKey.label),
+                trailing: hotKey.id == selectedId
+                    ? const Icon(Icons.check, color: AppColors.ink)
+                    : null,
+                onTap: () => Navigator.of(context).pop(_TagChoice(hotKey.id)),
+              ),
+            ListTile(
+              leading: const CircleAvatar(
+                radius: 14,
+                backgroundColor: AppColors.mist,
+                child: Icon(Icons.block, size: 14, color: AppColors.textMuted),
+              ),
+              title: const Text('No tag'),
+              trailing: selectedId == null
+                  ? const Icon(Icons.check, color: AppColors.ink)
+                  : null,
+              onTap: () => Navigator.of(context).pop(const _TagChoice(null)),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }

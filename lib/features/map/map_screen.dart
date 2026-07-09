@@ -412,6 +412,31 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       filter: ['has', 'point_count'],
       enableInteraction: false,
     );
+    // Beneath the pins: a faded cone for points that carry a heading, rotated
+    // to that bearing so it fans out from the point in the direction faced. The
+    // pin and its icon are unchanged; this only adds the direction.
+    await controller.addSymbolLayer(
+      'points',
+      'points-heading',
+      const SymbolLayerProperties(
+        iconImage: [Expressions.get, 'cone'],
+        iconSize: 1,
+        iconAnchor: 'bottom',
+        iconRotate: [Expressions.get, 'heading'],
+        iconRotationAlignment: 'map',
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+      ),
+      filter: [
+        'all',
+        [
+          '!',
+          ['has', 'point_count'],
+        ],
+        ['has', 'heading'],
+      ],
+      enableInteraction: false,
+    );
     // Single points: the tag-coloured icon pin.
     await controller.addSymbolLayer(
       'points',
@@ -612,17 +637,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final hotKeys = await ref.read(databaseProvider).hotKeysFor(widget.groupId);
     _hotKeysById = {for (final h in hotKeys) h.id: h};
     for (final hotKey in hotKeys) {
+      final color = Color(hotKey.colorValue);
       await controller.addImage(
         'pin_${hotKey.id}',
-        await buildPinImage(
-          color: Color(hotKey.colorValue),
-          icon: hotKeyIcon(hotKey.iconName),
-        ),
+        await buildPinImage(color: color, icon: hotKeyIcon(hotKey.iconName)),
+      );
+      await controller.addImage(
+        'cone_${hotKey.id}',
+        await buildHeadingConeImage(color: color),
       );
     }
     await controller.addImage(
       'pin_default',
       await buildPinImage(color: const Color(0xFF15181B)),
+    );
+    await controller.addImage(
+      'cone_default',
+      await buildHeadingConeImage(color: const Color(0xFF15181B)),
     );
   }
 
@@ -755,11 +786,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final feature = features[i] as Map<String, dynamic>;
       feature['id'] = i;
       final properties = feature['properties'] as Map<String, dynamic>;
+      final message = byId[properties['id']]!;
       final tagId = properties['tagId'] as String?;
-      properties['icon'] = tagId != null && hotKeyIds.contains(tagId)
-          ? 'pin_$tagId'
-          : 'pin_default';
-      ordered.add(byId[properties['id']]!);
+      final suffix = tagId != null && hotKeyIds.contains(tagId)
+          ? tagId
+          : 'default';
+      properties['icon'] = 'pin_$suffix';
+      final heading = message.headingDeg;
+      if (heading != null) {
+        properties['heading'] = heading;
+        properties['cone'] = 'cone_$suffix';
+      }
+      ordered.add(message);
     }
     _pointMessages = ordered;
     return collection;
