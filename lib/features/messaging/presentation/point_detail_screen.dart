@@ -51,6 +51,16 @@ class PointDetailScreen extends ConsumerStatefulWidget {
 
 class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
   MapLibreMapController? _controller;
+  bool _editingNote = false;
+  final _noteController = TextEditingController();
+  final _noteFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    _noteFocus.dispose();
+    super.dispose();
+  }
 
   Future<void> _onStyleLoaded() async {
     final controller = _controller;
@@ -156,15 +166,20 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
     await sync.deleteMessage(widget.message.id);
   }
 
-  Future<void> _editText(Message message) async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => _EditNoteDialog(initial: message.body ?? ''),
-    );
-    if (result == null || result.trim().isEmpty) return;
+  void _startNoteEdit(String initial) {
+    _noteController.text = initial;
+    setState(() => _editingNote = true);
+  }
+
+  void _cancelNoteEdit() => setState(() => _editingNote = false);
+
+  Future<void> _saveNoteEdit(Message message) async {
+    final text = _noteController.text.trim();
+    setState(() => _editingNote = false);
+    if (text.isEmpty || text == (message.body ?? '')) return;
     await ref
         .read(syncServiceProvider)
-        .editMessage(messageId: message.id, newBody: result.trim());
+        .editMessage(messageId: message.id, newBody: text);
   }
 
   Future<void> _editTag(Message message, List<HotKey> hotKeys) async {
@@ -242,11 +257,6 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
         actions: [
           if (canEdit)
             IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () => unawaited(_editText(message)),
-            ),
-          if (canEdit)
-            IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: () => unawaited(_confirmDelete()),
             ),
@@ -283,7 +293,6 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
                     label: tagLabel,
                     color: tagColor ?? AppColors.ink,
                     glyph: glyph,
-                    editable: canEdit,
                     onTap: canEdit
                         ? () => unawaited(_editTag(message, hotKeys))
                         : null,
@@ -292,12 +301,24 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
                   _AddTagChip(
                     onTap: () => unawaited(_editTag(message, hotKeys)),
                   ),
-                if (message.body != null) ...[
+                if (_editingNote)
+                  _NoteEditor(
+                    controller: _noteController,
+                    focusNode: _noteFocus,
+                    onCancel: _cancelNoteEdit,
+                    onSave: () => unawaited(_saveNoteEdit(message)),
+                  )
+                else if (message.body != null) ...[
                   const SizedBox(height: AppSpacing.md),
-                  Text(
-                    message.body!,
-                    style: Theme.of(context).textTheme.titleLarge,
+                  _NoteTitle(
+                    text: message.body!,
+                    onTap: canEdit
+                        ? () => _startNoteEdit(message.body!)
+                        : null,
                   ),
+                ] else if (canEdit) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _AddNote(onTap: () => _startNoteEdit('')),
                 ],
                 const SizedBox(height: AppSpacing.sm),
                 Text(
@@ -538,68 +559,128 @@ class _SentRowState extends State<_SentRow> {
   }
 }
 
-/// Edits a point's note. Owns its text controller so it is disposed with the
-/// dialog, not mid-animation, which would trip a framework assertion.
-class _EditNoteDialog extends StatefulWidget {
-  const _EditNoteDialog({required this.initial});
+/// The point's note as a large title. When editable it is tappable to edit in
+/// place, with a faint pencil to signal that.
+class _NoteTitle extends StatelessWidget {
+  const _NoteTitle({required this.text, this.onTap});
 
-  final String initial;
-
-  @override
-  State<_EditNoteDialog> createState() => _EditNoteDialogState();
-}
-
-class _EditNoteDialogState extends State<_EditNoteDialog> {
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final String text;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Edit note'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        maxLines: null,
-        decoration: const InputDecoration(
-          hintText: 'Describe this point',
-          border: OutlineInputBorder(),
-        ),
+    final title = Text(text, style: Theme.of(context).textTheme.titleLarge);
+    if (onTap == null) return title;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: title),
+          const Padding(
+            padding: EdgeInsets.only(left: 6, top: 4),
+            child: Icon(
+              Icons.edit_outlined,
+              size: 15,
+              color: AppColors.textFaint,
+            ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+    );
+  }
+}
+
+/// Edits a point's note in place. Its controller and focus are owned by the
+/// screen state, so they outlive this widget's rebuilds.
+class _NoteEditor extends StatelessWidget {
+  const _NoteEditor({
+    required this.controller,
+    required this.focusNode,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onSave;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        TextField(
+          controller: controller,
+          focusNode: focusNode,
+          autofocus: true,
+          maxLines: null,
+          style: Theme.of(context).textTheme.titleLarge,
+          decoration: const InputDecoration(
+            isDense: true,
+            hintText: 'Describe this point',
+            border: OutlineInputBorder(),
+          ),
         ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('Save'),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(onPressed: onCancel, child: const Text('Cancel')),
+            const SizedBox(width: AppSpacing.sm),
+            FilledButton(onPressed: onSave, child: const Text('Save')),
+          ],
         ),
       ],
     );
   }
 }
 
-/// The point's tag as a coloured chip. When editable it is tappable to re-tag
-/// and carries a small pencil to signal that.
+/// A tappable placeholder to add a note to a point you are allowed to edit.
+class _AddNote extends StatelessWidget {
+  const _AddNote({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.add, size: 15, color: AppColors.textMuted),
+          SizedBox(width: 4),
+          Text(
+            'Add note',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The point's tag as a coloured chip, tappable to re-tag when editable.
 class _TagChip extends StatelessWidget {
   const _TagChip({
     required this.label,
     required this.color,
     this.glyph,
-    this.editable = false,
     this.onTap,
   });
 
   final String label;
   final Color color;
   final IconData? glyph;
-  final bool editable;
   final VoidCallback? onTap;
 
   @override
@@ -627,10 +708,6 @@ class _TagChip extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (editable) ...[
-                const SizedBox(width: 5),
-                const Icon(Icons.edit, size: 12, color: AppColors.white),
-              ],
             ],
           ),
         ),
