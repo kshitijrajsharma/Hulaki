@@ -159,6 +159,7 @@ class InMemoryPublicDirectory implements PublicDirectory {
   @override
   Future<void> remove(String groupId) async {
     _entries.remove(groupId);
+    _requests.removeWhere((_, request) => request.groupId == groupId);
   }
 
   @override

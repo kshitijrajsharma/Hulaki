@@ -26,6 +26,12 @@ create policy envelopes_select on public.envelopes
 create policy envelopes_insert on public.envelopes
   for insert to authenticated with check (true);
 
+-- Same open MVP posture: any signed-in device may delete, so an admin's
+-- "Delete group" can purge the group's envelopes. Harden later alongside the
+-- select and insert policies with a per-group membership check.
+create policy envelopes_delete on public.envelopes
+  for delete to authenticated using (true);
+
 -- Realtime fan-out for subscribe().
 alter publication supabase_realtime add table public.envelopes;
 

@@ -134,4 +134,43 @@ void main() {
     expect(await joiner.sees(group.id, firstId), isTrue);
     expect(await joiner.sees(group.id, secondId), isTrue);
   });
+
+  test('an admin delete purges server data for later joiners', () async {
+    final transport = InMemoryTransport();
+    final blobs = InMemoryBlobStore();
+    final owner = _Device('owner', transport, blobs);
+    final joiner = _Device('joiner', transport, blobs);
+    addTearDown(() async {
+      await owner.dispose();
+      await joiner.dispose();
+      await transport.dispose();
+    });
+
+    final group = await owner.groups.createGroup(
+      name: 'Ward survey',
+      identity: await IdentityKeys.generate(),
+      hotKeys: const [],
+    );
+    final link = owner.groups.inviteLinkFor(group);
+    final messageId = await owner.sync.sendText(
+      groupId: group.id,
+      text: 'First observation',
+    );
+    await joiner.groups.joinViaLink(link, await IdentityKeys.generate());
+    await _waitFor(() => joiner.sees(group.id, messageId));
+
+    expect(await transport.fetchSince(group.id, 0), isNotEmpty);
+    await owner.groups.deleteGroupForEveryone(group.id);
+
+    // The server holds nothing, and the local copy is gone.
+    expect(await transport.fetchSince(group.id, 0), isEmpty);
+    expect(await owner.db.groupById(group.id), isNull);
+
+    // A device joining afterwards backfills an empty history.
+    final latecomer = _Device('latecomer', transport, blobs);
+    addTearDown(latecomer.dispose);
+    await latecomer.groups.joinViaLink(link, await IdentityKeys.generate());
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(await latecomer.db.messagesFor(group.id), isEmpty);
+  });
 }

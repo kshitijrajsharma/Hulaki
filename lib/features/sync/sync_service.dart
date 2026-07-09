@@ -31,6 +31,7 @@ class SyncService {
   final Uuid _uuid;
 
   final Map<String, StreamSubscription<Envelope>> _subscriptions = {};
+  final Set<String> _caughtUp = {};
   final Set<String> _syncing = {};
   final StreamController<Set<String>> _syncingController =
       StreamController<Set<String>>.broadcast();
@@ -78,6 +79,7 @@ class SyncService {
         await sub.cancel();
       }
       _subscriptions.clear();
+      _caughtUp.clear();
       return;
     }
     await _drain();
@@ -103,11 +105,32 @@ class SyncService {
   Future<void> catchUp(String groupId) async {
     if (_disposed) return;
     final since = await db.cursorFor(groupId);
-    final envelopes = await transport.fetchSince(groupId, since);
+    final envelopes = await transport.fetchSince(groupId, since)
+      // Apply strictly by seq: group-meta is last-writer-wins, so a transport
+      // that returns rows in any other order must not decide which edit sticks.
+      ..sort((a, b) => a.seq.compareTo(b.seq));
     for (final envelope in envelopes) {
       if (_disposed) return;
       await _ingest(envelope, applyOwnMeta: true);
     }
+    // The group is now current: live envelopes may advance the cursor.
+    _caughtUp.add(groupId);
+  }
+
+  /// Cancels a group's live subscription and forgets its catch-up state, so a
+  /// later rejoin builds a fresh subscription and re-runs catch-up cleanly.
+  Future<void> stop(String groupId) async {
+    _caughtUp.remove(groupId);
+    final sub = _subscriptions.remove(groupId);
+    await sub?.cancel();
+  }
+
+  /// Deletes a group's stored envelopes on the server after tearing down its
+  /// live subscription, so an admin's delete removes the data everywhere and no
+  /// in-flight fan-out re-ingests it mid-purge.
+  Future<void> purgeRemote(String groupId) async {
+    await stop(groupId);
+    await transport.purgeGroup(groupId);
   }
 
   /// Re-fetches a group's whole history from the start and re-ingests it,
@@ -394,18 +417,23 @@ class SyncService {
         await GroupCipher.decryptJson(envelope.ciphertext, key),
       );
       final isMeta = payload.kind == MessageKind.groupMeta;
-      // Our own group-meta is reapplied only during catch-up, so a rejoined
-      // device restores its own settings and quick tags. Skipping it on the
-      // live subscription keeps a returning echo from clobbering fresh edits.
-      if (isMeta && (!mine || applyOwnMeta)) {
+      // Own envelopes are reapplied only during catch-up, so a rejoined device
+      // restores its own tags, settings and points. The live path skips them so
+      // a returning echo cannot clobber fresh local state.
+      final apply = !mine || applyOwnMeta;
+      if (isMeta && apply) {
         await _applyGroupMeta(payload);
-      } else if (!mine && !isMeta) {
+      } else if (!isMeta && apply) {
         await _ingestFromOther(payload, envelope);
       }
     }
 
+    // Hold the cursor until the first catch-up for this group finishes. A live
+    // envelope arriving mid-join must not advance it past the group-meta, or
+    // catch-up's fetchSince would skip the tags, area and points on a rejoin.
+    final advance = applyOwnMeta || _caughtUp.contains(envelope.groupId);
     final current = await db.cursorFor(envelope.groupId);
-    if (envelope.seq > current) {
+    if (advance && envelope.seq > current) {
       await db.setCursor(envelope.groupId, envelope.seq);
     }
   }

@@ -356,6 +356,10 @@ class GroupService {
 
   /// Removes the group and its local data from this device.
   Future<void> deleteGroup(String groupId) async {
+    // Tear down the live subscription first so a rejoin builds a fresh one and
+    // re-runs catch-up, instead of reusing a warm channel that could advance
+    // the cursor past the group-meta and drop tags, area and points.
+    await sync.stop(groupId);
     await (db.delete(
       db.messages,
     )..where((m) => m.groupId.equals(groupId))).go();
@@ -366,6 +370,15 @@ class GroupService {
     await db.clearOutboxFor(groupId);
     await db.clearCursor(groupId);
     await (db.delete(db.groups)..where((g) => g.id.equals(groupId))).go();
+  }
+
+  /// An admin's delete: purges the group's envelopes on the server, then drops
+  /// the local copy. The public listing is cleared by the caller, which holds
+  /// the directory. Members who still have the group keep only their own local
+  /// copy afterwards.
+  Future<void> deleteGroupForEveryone(String groupId) async {
+    await sync.purgeRemote(groupId);
+    await deleteGroup(groupId);
   }
 
   String inviteLinkFor(Group group) =>

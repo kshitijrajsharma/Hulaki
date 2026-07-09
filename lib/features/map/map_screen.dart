@@ -218,6 +218,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Widget build(BuildContext context) {
     ref.listen(messagesProvider(widget.groupId), (_, _) => _refreshPins());
 
+    // The legend sits in its own SafeArea, so its top edge is the bottom inset
+    // plus its bar height. Offsetting the zoom pill by the same inset keeps it
+    // clear of the legend on devices with a home indicator, iOS included.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -290,7 +295,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             Positioned(
               left: 0,
               right: 0,
-              bottom: _legend.isEmpty ? 44 : 70,
+              bottom: bottomInset + (_legend.isEmpty ? 24 : 70),
               child: Center(
                 child: _ZoomToAreaPill(
                   label: _aoiGeoJson != null

@@ -364,28 +364,60 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
     if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  Future<void> _delete(String groupId) async {
+  Future<void> _delete(String groupId, String groupName) async {
+    final controller = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete this group?'),
-        content: const Text(
-          'The group and its points are removed from this device.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          final matches = controller.text.trim() == groupName.trim();
+          return AlertDialog(
+            title: const Text('Delete this group?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'This erases the group and its points for everyone, on '
+                  'the server and on this device. It cannot be undone.',
+                ),
+                const SizedBox(height: AppSpacing.md),
+                const Text(
+                  'Type the group name to confirm.',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: groupName,
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: matches
+                    ? () => Navigator.of(dialogContext).pop(true)
+                    : null,
+                child: const Text('Delete'),
+              ),
+            ],
+          );
+        },
       ),
     );
+    controller.dispose();
     if (!(confirmed ?? false)) return;
-    await ref.read(groupServiceProvider).deleteGroup(groupId);
+    await ref.read(publicDirectoryProvider).remove(groupId);
+    await ref.read(groupServiceProvider).deleteGroupForEveryone(groupId);
     if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
@@ -498,7 +530,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                   isPublic: group.isPublic,
                   onTogglePublic: (value) => _setPublic(group.id, value),
                   onArchive: () => _archive(group.id),
-                  onDelete: () => _delete(group.id),
+                  onDelete: () => _delete(group.id, group.name),
                 ),
               ] else ...[
                 const SizedBox(height: AppSpacing.lg),

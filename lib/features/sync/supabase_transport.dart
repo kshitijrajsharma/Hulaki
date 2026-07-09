@@ -55,13 +55,35 @@ class SupabaseTransport implements MessageTransport {
 
   @override
   Future<List<Envelope>> fetchSince(String groupId, int afterSeq) async {
-    final rows = await _client
-        .from(_table)
-        .select()
-        .eq('group_id', groupId)
-        .gt('seq', afterSeq)
-        .order('seq');
-    return [for (final row in rows) _envelopeFrom(row)];
+    // Page by seq so a group with more envelopes than the server's default row
+    // cap still catches up fully, instead of silently stopping at one page.
+    const pageSize = 1000;
+    final envelopes = <Envelope>[];
+    var cursor = afterSeq;
+    while (true) {
+      final rows = await _client
+          .from(_table)
+          .select()
+          .eq('group_id', groupId)
+          .gt('seq', cursor)
+          // Ascending, so metas replay oldest-first and the newest edit wins.
+          // supabase-dart's order() defaults to descending, which would let the
+          // create-time meta clobber later tag and area edits.
+          .order('seq', ascending: true)
+          .limit(pageSize);
+      if (rows.isEmpty) break;
+      for (final row in rows) {
+        envelopes.add(_envelopeFrom(row));
+      }
+      cursor = envelopes.last.seq;
+      if (rows.length < pageSize) break;
+    }
+    return envelopes;
+  }
+
+  @override
+  Future<void> purgeGroup(String groupId) async {
+    await _client.from(_table).delete().eq('group_id', groupId);
   }
 
   Envelope _envelopeFrom(Map<String, dynamic> row) => Envelope(

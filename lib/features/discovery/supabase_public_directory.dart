@@ -91,6 +91,7 @@ class SupabasePublicDirectory implements PublicDirectory {
   @override
   Future<void> remove(String groupId) async {
     await _client.from(_table).delete().eq('group_id', groupId);
+    await _client.from(_requestsTable).delete().eq('group_id', groupId);
   }
 
   @override

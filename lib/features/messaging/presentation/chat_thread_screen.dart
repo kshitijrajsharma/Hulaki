@@ -56,6 +56,11 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   Uint8List? _pendingPhoto;
   StagedPoint? _stagedPoint;
 
+  /// The last non-null compass heading. The magnetometer often reports null
+  /// while it settles (especially on iOS), so a fresh read at send time is
+  /// frequently empty; holding the last good value keeps the point's heading.
+  double? _lastHeading;
+
   bool _resyncing = false;
 
   @override
@@ -287,7 +292,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     try {
       final staged = _stagedPoint;
       final live = ref.read(liveLocationProvider).asData?.value;
-      final heading = ref.read(compassHeadingProvider).asData?.value;
+      final heading =
+          ref.read(compassHeadingProvider).asData?.value ?? _lastHeading;
       final GeoResult geo;
       if (staged != null) {
         geo = GeoResult.placed(staged.lat, staged.lng);
@@ -369,6 +375,13 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep the compass alive while the thread is open and remember the last
+    // good heading, so a point sent the instant the sensor blips null still
+    // carries a direction.
+    ref.listen<AsyncValue<double?>>(compassHeadingProvider, (_, next) {
+      final heading = next.asData?.value;
+      if (heading != null) _lastHeading = heading;
+    });
     final messages = ref.watch(messagesProvider(widget.groupId));
     final hotKeys = ref.watch(hotKeysProvider(widget.groupId)).value ?? [];
     final hotKeysById = {for (final h in hotKeys) h.id: h};

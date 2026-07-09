@@ -38,4 +38,8 @@ abstract interface class MessageTransport {
 
   /// Envelopes with a sequence greater than [afterSeq], for catch-up.
   Future<List<Envelope>> fetchSince(String groupId, int afterSeq);
+
+  /// Deletes every stored envelope for a group, for an admin's delete. Leaving
+  /// a group never calls this, so other members keep the data.
+  Future<void> purgeGroup(String groupId);
 }

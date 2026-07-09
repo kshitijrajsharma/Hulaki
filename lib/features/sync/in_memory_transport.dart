@@ -34,6 +34,11 @@ class InMemoryTransport implements MessageTransport {
     return log.where((e) => e.seq > afterSeq).toList();
   }
 
+  @override
+  Future<void> purgeGroup(String groupId) async {
+    _log.remove(groupId);
+  }
+
   Future<void> dispose() async {
     for (final controller in _streams.values) {
       await controller.close();
