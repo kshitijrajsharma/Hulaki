@@ -1,71 +1,82 @@
 # Store listing
 
-Copy for Google Play and the Apple App Store, plus the privacy disclosures each
-store asks for. Fill the bracketed placeholders before submitting.
+Copy for Google Play, plus the privacy answers the store asks for. Focused on
+the Play submission. Apple fields are kept at the end for later.
 
 ## Names
 
-- App name: FieldChat
-- Subtitle (Apple, 30 chars): Map the field while you chat
-- Short description (Play, 80 chars): Offline-first, encrypted group chat where
+- App name (max 30): FieldChat
+- Short description (Play, max 80): Offline-first, encrypted group chat where
   every message is a mapped point.
 
-## Full description
+## Full description (Play, max 4000)
 
-FieldChat turns group chat into field data. Every message you send is a
-geotagged observation that lands on a shared map, so your team collects clean,
-located data while simply talking.
+FieldChat is a field mapping app. Every chat message is a point on the map, so
+a group can record what they see in the field and see it in one place.
 
-Built for field mapping:
-- Offline-first. Capture points and chat with no signal; it syncs when you are
-  back online.
-- One-tap hot-keys tag each observation and colour its pin on the map.
-- Every point carries GPS accuracy, and optionally altitude and heading.
-- Draw a task area, cache its map for offline use, and export to GeoJSON or GPX.
-- End-to-end encrypted. Your content is unreadable to the server.
-- No phone number and no email. Pick a username and start.
+It is offline first. You can drop points and send messages with no signal, and
+they sync when you are back online. You can save a map area for offline use.
 
-Free and open source under AGPL-3.0.
+It is privacy first. Messages and photos are end to end encrypted on your
+device. The server stores only encrypted data and cannot read your content. The
+group key is shared through the group invite link, never sent to the server.
+
+No account is needed. There is no sign up with email or phone, no ads, no
+analytics, and no tracking.
+
+What you can do:
+- Create a group and invite people with a link.
+- Drop points on the map and tag them with quick tags.
+- Attach a photo to a point.
+- See every group member's points on one map.
+- Record a track while you move.
+- Set a mapping area for the group.
+- Find public groups near you and ask to join.
+- Export points as GeoJSON or GPX.
+
+FieldChat is a personal, non-commercial project, open source under AGPL-3.0. It
+is provided as is, without warranty. Do not rely on it for navigation,
+emergency, or safety of life.
 
 ## Category and rating
 
-- Category: Productivity (or Maps & Navigation)
-- Content rating: Everyone / 4+
+- Category: Maps & Navigation (or Productivity)
+- Content rating: Everyone
 - Contains ads: No
 - In-app purchases: No
 
-## Keywords (Apple, 100 chars)
+## Play Data safety answers
 
-field mapping, gis, survey, gps, offline, geojson, gpx, osm, data collection,
-encrypted chat
+- Data collected: Location (approximate and precise), Photos, Messages, and a
+  chosen username plus a random device id.
+- Purpose: App functionality only.
+- Shared with third parties: Not for advertising or analytics. Encrypted content
+  is relayed and stored through Supabase (a processor) and cannot be read by it.
+- Location can be readable for public groups: if a user makes a group publicly
+  discoverable, the group's name and approximate location are stored readably in
+  the public directory so others can find it.
+- Encrypted in transit: Yes.
+- Stored encrypted on the server: Yes, end to end. The server holds only
+  ciphertext.
+- Users can request deletion: Yes, by contacting krschap@proton.me.
+
+## URLs
+
+- Privacy policy: https://kshitijrajsharma.github.io/FieldChat/privacy-policy.html
+- Terms of use: https://kshitijrajsharma.github.io/FieldChat/terms.html
+- Support email: krschap@proton.me
+- Support site: https://github.com/kshitijrajsharma/FieldChat
 
 ## Assets to provide
 
-- App icon (already in assets/icon).
-- Screenshots: onboarding, chats, chat thread, map with pins, point detail,
-  group members. Capture on a device or emulator.
-- Feature graphic (Play, 1024x500).
+- App icon (in assets/icon), and a 512x512 PNG for the listing.
+- Feature graphic, 1024x500.
+- At least two phone screenshots (capture from a device or the emulator).
 
-## Play Data Safety answers
+## Apple fields (for later)
 
-- Data collected: Location (approximate and precise), Photos, Messages, User ids
-  (the chosen username and device id).
-- Data shared with third parties: None for advertising or analytics. Encrypted
-  content is relayed through Supabase (processor) and cannot be read by it.
-- Data encrypted in transit: Yes.
-- Data encrypted at rest on the server: Yes, end-to-end; the server holds only
-  ciphertext.
-- Users can request deletion: Yes, by deleting content and uninstalling.
-
-## Apple privacy nutrition labels
-
-- Data used to track you: None.
-- Data linked to you: None (identity is a random device id and a chosen handle).
-- Data not linked to you: Coarse and precise location, photos, and user content,
-  all end-to-end encrypted.
-
-## Support and policy URLs
-
-- Privacy policy: host docs/privacy-policy.md on GitHub Pages, for example
-  https://kshitijrajsharma.github.io/fieldchat/privacy-policy
-- Support URL: github.com/kshitijrajsharma
+- Subtitle (max 30): Map the field while you chat
+- Keywords (max 100): field mapping, gis, survey, gps, offline, geojson, gpx,
+  osm, data collection, encrypted chat
+- App privacy: no tracking; location, photos, and messages are end to end
+  encrypted and not used to track you.

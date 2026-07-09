@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FieldChat Privacy Policy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height: 1.6; max-width: 44rem; margin: 0 auto; padding: 2rem 1.25rem;
+    color: #15181b; background: #f6f4ee;
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; margin-top: 2rem; }
+  .meta { color: #5d584d; font-size: 0.9rem; }
+  code { background: rgba(0,0,0,0.06); padding: 0.1rem 0.3rem; border-radius: 4px; }
+  ul { padding-left: 1.2rem; }
+  a { color: #3466a0; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #ececec; background: #15181b; }
+    code { background: rgba(255,255,255,0.1); }
+    .meta { color: #a49f95; }
+    a { color: #7aa7e0; }
+  }
+</style>
+</head>
+<body>
+<h1>FieldChat Privacy Policy</h1>
+<p class="meta">Effective date: 9 July 2026</p>
+
+<p>
+  FieldChat is an offline-first field mapping app where each chat message is a
+  geotagged observation shared with a group. This policy explains what data the
+  app handles, why, and who it is shared with. It is written for the app as it
+  works today.
+</p>
+
+<h2>Summary</h2>
+<ul>
+  <li>Messages and photos are end to end encrypted. The server stores only
+  ciphertext and cannot read their content.</li>
+  <li>The app uses your precise location to tag observations and show them on a
+  map. Location is used only while the app or its foreground service is
+  running. The app does not track your location in the background for
+  advertising or profiling.</li>
+  <li>No name, email address, or phone number is required to use the app.</li>
+  <li>The app contains no advertising, no analytics, and no third-party
+  tracking software.</li>
+</ul>
+
+<h2>Information the app handles</h2>
+<ul>
+  <li><strong>Location.</strong> With your permission, the app reads your
+  device GPS position to attach a location to the observations you send and to
+  center the map. While you record a track, a foreground service reads location
+  so recording continues with the screen off. A persistent notification is
+  shown whenever that service runs.</li>
+  <li><strong>Messages and photos.</strong> The observations, text, and photos
+  you send are encrypted on your device before they leave it, using a group key
+  that is shared only through a group invite link. The server that relays and
+  stores them holds only encrypted data.</li>
+  <li><strong>Display name.</strong> You choose a username shown to other
+  members of your groups. It is not linked to a real identity by the app.</li>
+  <li><strong>Account identifier.</strong> The app signs in anonymously and is
+  assigned a random account identifier by the backend. This is not tied to an
+  email address or phone number.</li>
+  <li><strong>Device keys.</strong> The app generates cryptographic keys on your
+  device to sign and verify group control messages. Private keys stay in the
+  device secure keystore. Only public keys are shared with your group.</li>
+  <li><strong>Camera.</strong> If you attach a photo to an observation, the app
+  uses the camera. Photos are encrypted before upload.</li>
+</ul>
+
+<h2>Public groups</h2>
+<p>
+  If you choose to make a group publicly discoverable, that group's name,
+  description, map area, quick tags, optional icon, and approximate center
+  location are published to a directory so that other people nearby can find and
+  join it. This information is stored in readable form so the directory can work.
+  Do not make a group public if you do not want its name and location to be
+  visible to other app users. Groups that are not made public are joined only
+  through an invite link and are not listed in the directory.
+</p>
+<p>
+  When you request to join a group that requires approval, your chosen display
+  name and public keys are stored with that request so an admin can approve you.
+</p>
+
+<h2>What the app does not collect</h2>
+<ul>
+  <li>No advertising identifiers and no ads.</li>
+  <li>No analytics, crash reporting, or usage tracking software.</li>
+  <li>No contacts, no call logs, no browsing history.</li>
+  <li>No requirement to provide a name, email address, or phone number.</li>
+</ul>
+
+<h2>Service providers and third parties</h2>
+<p>The app relies on the following services to function:</p>
+<ul>
+  <li><strong>Supabase</strong> hosts the backend that relays and stores
+  encrypted messages, encrypted media, and the public group directory. Servers
+  are located in the European Union. Message and media content reaches Supabase
+  only as ciphertext.</li>
+  <li><strong>CARTO</strong> serves the default map tiles and fonts. When the
+  map loads, your device requests tiles from CARTO, which necessarily receives
+  your IP address and the map area being viewed.</li>
+  <li><strong>Esri</strong> serves satellite imagery tiles if you switch the map
+  to satellite view. The same request information applies while that view is
+  active.</li>
+  <li><strong>Your device platform</strong> (Apple or Google) resolves
+  coordinates to place names through the operating system geocoding service, so
+  a coordinate may be sent to that platform service to obtain a place name.</li>
+</ul>
+<p>
+  These providers process data to deliver their service. The app does not sell
+  personal data and does not share it for advertising.
+</p>
+
+<h2>Data retention and deletion</h2>
+<p>
+  Encrypted messages and media remain on the backend so that group members can
+  sync history. Because content is end to end encrypted, it is not readable by
+  the operator. You can leave a group at any time. To request deletion of
+  server-stored data associated with your account or a group you administer,
+  contact us at the address below.
+</p>
+
+<h2>Security</h2>
+<p>
+  Message and media content is end to end encrypted with keys that are never
+  sent to the server. Data in transit is protected with HTTPS. No method of
+  transmission or storage is perfectly secure, but the design keeps readable
+  content off the server.
+</p>
+
+<h2>Children</h2>
+<p>
+  FieldChat is intended for general audiences and is not directed at children.
+  The app does not knowingly collect personal information from children.
+</p>
+
+<h2>Changes to this policy</h2>
+<p>
+  This policy may be updated as the app changes. Material changes will be
+  reflected here with a new effective date.
+</p>
+
+<h2>Operator and governing law</h2>
+<p>
+  FieldChat is provided by an individual as a personal, non-commercial project.
+  It is operated from Nepal, and this policy is governed by the laws of Nepal.
+</p>
+
+<h2>Contact</h2>
+<p>
+  For privacy questions or data requests, contact
+  <a href="mailto:krschap@proton.me">krschap@proton.me</a>.
+</p>
+
+</body>
+</html>
