@@ -713,25 +713,157 @@ class _HotKeyBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hotKeys.isEmpty) return const SizedBox.shrink();
+    final showMore = hotKeys.length > 6;
     return Container(
       color: AppColors.white,
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-      child: SizedBox(
-        height: 36,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: hotKeys.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 7),
-          itemBuilder: (context, i) {
-            final hotKey = hotKeys[i];
-            return HotKeyChip(
-              label: hotKey.label,
-              color: Color(hotKey.colorValue),
-              icon: hotKeyIcon(hotKey.iconName),
-              selected: hotKey.id == selectedId,
-              onTap: () => onSelect(hotKey.id),
-            );
-          },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showMore) ...[
+            _MoreTagsPill(onTap: () => unawaited(_pickTag(context))),
+            const SizedBox(height: 6),
+          ],
+          SizedBox(
+            height: 36,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: hotKeys.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 7),
+              itemBuilder: (context, i) {
+                final hotKey = hotKeys[i];
+                return HotKeyChip(
+                  label: hotKey.label,
+                  color: Color(hotKey.colorValue),
+                  icon: hotKeyIcon(hotKey.iconName),
+                  selected: hotKey.id == selectedId,
+                  onTap: () => onSelect(hotKey.id),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickTag(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TagPickerSheet(
+        hotKeys: hotKeys,
+        selectedId: selectedId,
+        onSelect: onSelect,
+      ),
+    );
+  }
+}
+
+/// The small pill that floats above the tag row when there are many tags.
+class _MoreTagsPill extends StatelessWidget {
+  const _MoreTagsPill({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.field,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+          child: Icon(
+            Icons.keyboard_arrow_up,
+            size: 20,
+            color: AppColors.ink,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The full tag list as a drawer for picking one to tag the next message.
+class _TagPickerSheet extends StatelessWidget {
+  const _TagPickerSheet({
+    required this.hotKeys,
+    required this.selectedId,
+    required this.onSelect,
+  });
+
+  final List<HotKey> hotKeys;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.mist,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 14, 20, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Tag the next point',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final hotKey in hotKeys)
+                    ListTile(
+                      onTap: () {
+                        onSelect(hotKey.id);
+                        Navigator.of(context).pop();
+                      },
+                      leading: CircleAvatar(
+                        radius: 13,
+                        backgroundColor: Color(hotKey.colorValue),
+                        child: hotKeyIcon(hotKey.iconName) == null
+                            ? null
+                            : Icon(
+                                hotKeyIcon(hotKey.iconName),
+                                size: 15,
+                                color: AppColors.white,
+                              ),
+                      ),
+                      title: Text(
+                        hotKey.label,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      trailing: hotKey.id == selectedId
+                          ? const Icon(Icons.check, color: AppColors.ink)
+                          : null,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );

@@ -978,57 +978,58 @@ class _LegendBar extends StatelessWidget {
   final Set<String> hidden;
   final ValueChanged<String> onToggle;
 
-  // Above this many tags the bar scrolls and pins an expand button that opens
-  // the full list; at or below it the tags just hug the bar.
-  static const _maxHug = 3;
+  // Past this many tags a "more" pill floats above the bar to open the full
+  // list; the bar itself always stays scrollable.
+  static const _maxInline = 6;
 
   @override
   Widget build(BuildContext context) {
     final sorted = [...entries]..sort((a, b) => b.count.compareTo(a.count));
-    final many = sorted.length > _maxHug;
+    final showMore = sorted.length > _maxInline;
 
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.only(bottom: 8),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final maxWidth = constraints.maxWidth - 24;
-          final chips = ListView.separated(
-            scrollDirection: Axis.horizontal,
-            shrinkWrap: !many,
-            physics: many
-                ? const ClampingScrollPhysics()
-                : const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            itemCount: sorted.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 6),
-            itemBuilder: (context, i) =>
-                _chip(sorted[i], on: !hidden.contains(sorted[i].tagKey)),
+          final bar = ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth - 24),
+            child: Material(
+              color: AppColors.white.withValues(alpha: 0.96),
+              borderRadius: BorderRadius.circular(22),
+              elevation: 2,
+              clipBehavior: Clip.antiAlias,
+              child: SizedBox(
+                height: 46,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  shrinkWrap: true,
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 6,
+                  ),
+                  itemCount: sorted.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 6),
+                  itemBuilder: (context, i) =>
+                      _chip(sorted[i], on: !hidden.contains(sorted[i].tagKey)),
+                ),
+              ),
+            ),
           );
           return Align(
             alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: Material(
-                color: AppColors.white.withValues(alpha: 0.96),
-                borderRadius: BorderRadius.circular(22),
-                elevation: 2,
-                clipBehavior: Clip.antiAlias,
-                child: SizedBox(
-                  height: 46,
-                  child: many
-                      ? Row(
-                          children: [
-                            Expanded(child: chips),
-                            _ExpandButton(
-                              onTap: () =>
-                                  unawaited(_showAllTags(context, sorted)),
-                            ),
-                          ],
-                        )
-                      : chips,
-                ),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showMore) ...[
+                  _ExpandPill(
+                    onTap: () => unawaited(_showAllTags(context, sorted)),
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                bar,
+              ],
             ),
           );
         },
@@ -1090,26 +1091,28 @@ class _LegendBar extends StatelessWidget {
   }
 }
 
-/// The pinned button at the end of a crowded legend; opens the full tag list.
-class _ExpandButton extends StatelessWidget {
-  const _ExpandButton({required this.onTap});
+/// The small pill that floats above a crowded legend; opens the full tag list.
+class _ExpandPill extends StatelessWidget {
+  const _ExpandPill({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        height: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: const BoxDecoration(
-          border: Border(left: BorderSide(color: AppColors.mist)),
-        ),
-        child: const Icon(
-          Icons.keyboard_arrow_up,
-          size: 20,
-          color: AppColors.ink,
+    return Material(
+      color: AppColors.white.withValues(alpha: 0.96),
+      borderRadius: BorderRadius.circular(16),
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 3),
+          child: Icon(
+            Icons.keyboard_arrow_up,
+            size: 20,
+            color: AppColors.ink,
+          ),
         ),
       ),
     );
