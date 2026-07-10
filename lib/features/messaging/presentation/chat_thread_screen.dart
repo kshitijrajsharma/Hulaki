@@ -736,36 +736,38 @@ class _HotKeyBar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (hotKeys.isEmpty) return const SizedBox.shrink();
     final showMore = hotKeys.length > 6;
-    return Container(
+    final chips = Container(
       color: AppColors.white,
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showMore) ...[
-            _MoreTagsHandle(onOpen: () => unawaited(_pickTag(context))),
-            const SizedBox(height: 6),
-          ],
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: hotKeys.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 7),
-              itemBuilder: (context, i) {
-                final hotKey = hotKeys[i];
-                return HotKeyChip(
-                  label: hotKey.label,
-                  color: Color(hotKey.colorValue),
-                  icon: hotKeyIcon(hotKey.iconName),
-                  selected: hotKey.id == selectedId,
-                  onTap: () => onSelect(hotKey.id),
-                );
-              },
-            ),
-          ),
-        ],
+      child: SizedBox(
+        height: 36,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: hotKeys.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 7),
+          itemBuilder: (context, i) {
+            final hotKey = hotKeys[i];
+            return HotKeyChip(
+              label: hotKey.label,
+              color: Color(hotKey.colorValue),
+              icon: hotKeyIcon(hotKey.iconName),
+              selected: hotKey.id == selectedId,
+              onTap: () => onSelect(hotKey.id),
+            );
+          },
+        ),
       ),
+    );
+    if (!showMore) return chips;
+    // The handle floats on the thread background above the white chip bar, the
+    // way the map's expand pill sits over the map, so no white band frames it.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _MoreTagsHandle(onOpen: () => unawaited(_pickTag(context))),
+        const SizedBox(height: 4),
+        chips,
+      ],
     );
   }
 

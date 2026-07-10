@@ -86,6 +86,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _sourcesReady = false;
   bool _styledOnce = false;
   bool _paintedOnce = false;
+  bool _pointsSettled = false;
   bool _satellite = false;
   String? _aoiGeoJson;
   bool _canPlace = true;
@@ -254,6 +255,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
             onCameraIdle: () => unawaited(_onCameraIdle()),
           ),
+          if (!_pointsSettled)
+            const Positioned.fill(
+              child: IgnorePointer(child: Center(child: _MapLoadingChip())),
+            ),
           Positioned(
             right: 16,
             bottom: 100,
@@ -474,8 +479,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _sourcesReady = true;
     // Seeding the source inline at add time does not always paint the pins on
     // the first frame, so push the collection once more now that the layers
-    // and pin images exist.
+    // and pin images exist, then a couple more times to force the symbol paint
+    // iOS otherwise defers until a gesture.
     await _refreshPins();
+    unawaited(_settlePins());
 
     // Framing and the focused-point sheet belong to the first load only. A
     // basemap toggle reloads the style and must not reopen the sheet or move
@@ -752,6 +759,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     await _controller?.setGeoJsonSource('points', await _featureCollection());
   }
 
+  /// Re-pushes the points a few times over the first second after a style load.
+  /// Each push forces a redraw, so the pins appear even on iOS, which otherwise
+  /// leaves symbols unpainted until the map is touched. Clears the spinner once
+  /// the points have had their chance to render.
+  Future<void> _settlePins() async {
+    for (final delayMs in const [200, 500, 900]) {
+      await Future<void>.delayed(Duration(milliseconds: delayMs));
+      if (!mounted || _controller == null || !_sourcesReady) return;
+      await _refreshPins();
+    }
+    if (mounted && !_pointsSettled) setState(() => _pointsSettled = true);
+  }
+
   /// Shows or hides a tag's points on the map from the legend.
   Future<void> _toggleTag(String key) async {
     setState(() {
@@ -884,6 +904,46 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       },
       'properties': <String, dynamic>{},
     };
+  }
+}
+
+/// A small centred chip shown over the map while the points are loading in, so
+/// an empty-looking map reads as loading rather than broken.
+class _MapLoadingChip extends StatelessWidget {
+  const _MapLoadingChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(22),
+      elevation: 3,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.amber,
+              ),
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Loading points…',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
