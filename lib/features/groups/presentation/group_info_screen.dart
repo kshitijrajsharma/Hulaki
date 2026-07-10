@@ -255,12 +255,8 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
   Future<void> _publishToDirectory(Group group, (double, double) center) async {
     final db = ref.read(databaseProvider);
     final hotKeys = await db.hotKeysFor(group.id);
-    final messages = await db.messagesFor(group.id);
-    final mapperCount = messages
-        .where((m) => m.lat != null && m.lng != null && m.deletedAt == null)
-        .map((m) => m.senderId)
-        .toSet()
-        .length;
+    final members = await ref.read(groupMembersProvider(group.id).future);
+    final memberCount = members.length;
     final photo = group.photo;
     await ref
         .read(publicDirectoryProvider)
@@ -286,7 +282,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                   iconName: hotKey.iconName,
                 ),
             ],
-            mapperCount: mapperCount,
+            memberCount: memberCount,
             aoiGeoJson: group.aoiGeoJson,
           ),
         );

@@ -30,7 +30,7 @@ class DirectoryTag {
 
 /// A discoverable public group as it appears in the nearby directory. Carries
 /// the group key, so a public group is joinable by anyone who finds it, plus
-/// the preview shown before joining (photo, tags, mappers, area).
+/// the preview shown before joining (photo, tags, members, area).
 class PublicGroup {
   const PublicGroup({
     required this.groupId,
@@ -41,7 +41,7 @@ class PublicGroup {
     this.description,
     this.photo,
     this.tags = const [],
-    this.mapperCount = 0,
+    this.memberCount = 0,
     this.aoiGeoJson,
     this.joinApproval = false,
     this.distanceM,
@@ -55,7 +55,10 @@ class PublicGroup {
   final String encKey;
   final Uint8List? photo;
   final List<DirectoryTag> tags;
-  final int mapperCount;
+
+  /// People in the group, shown on the public preview. Changes rarely, so it
+  /// stays close to current between the moments the listing is republished.
+  final int memberCount;
   final String? aoiGeoJson;
 
   /// When true the key is withheld from the listing; joining needs an admin's
@@ -76,7 +79,7 @@ class PublicGroup {
     description: description,
     photo: photo,
     tags: tags,
-    mapperCount: mapperCount,
+    memberCount: memberCount,
     aoiGeoJson: aoiGeoJson,
     joinApproval: joinApproval,
     distanceM: meters,

@@ -230,9 +230,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             styleString: _satellite
                 ? MapScreen._satelliteStyle
                 : MapScreen._osmStyle,
+            // A neutral world view as a placeholder only: the style-load
+            // callback snaps to the task area, points, or the user at once, so
+            // this is never a real place the map appears to open on.
             initialCameraPosition: const CameraPosition(
-              target: LatLng(27.7051, 85.3051),
-              zoom: 15,
+              target: LatLng(20, 0),
+              zoom: 1,
             ),
             myLocationEnabled: true,
             myLocationRenderMode: MyLocationRenderMode.compass,
@@ -374,7 +377,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       GeojsonSourceProperties(
         data: collection,
         cluster: true,
-        clusterMaxZoom: 16,
+        // Cluster only at overview zooms; from street level up (zoom > 14)
+        // points show individually, so mapping your own points never leaves
+        // them merged into one bubble. A tighter radius separates them sooner.
+        clusterMaxZoom: 14,
+        clusterRadius: 45,
       ),
     );
     // Clustered groups: a dark bubble whose size steps up with the count.
@@ -479,20 +486,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final focusId = widget.focusMessageId;
     if (focusId != null && await _focusMessage(focusId)) return;
 
-    // On first open, frame the group's mapped data so its points are visible
-    // even when you are standing far from them; the recenter button jumps back
-    // to your location. With nothing mapped yet, open where you are instead.
-    if ((collection['features'] as List).isNotEmpty) {
-      await _centerOnData(collection);
+    // On first open, frame the task area first so a stray far point cannot
+    // zoom the map out, then the points, then the user. The recenter button
+    // jumps back to your location. The first frame is instant, so the map lands
+    // on the area at once rather than flying in from the placeholder camera.
+    if (_aoiGeoJson != null) {
+      await _frameAoi(animate: false);
       return;
     }
-    if (_aoiGeoJson != null) {
-      await _frameAoi();
+    if ((collection['features'] as List).isNotEmpty) {
+      await _centerOnData(collection, animate: false);
       return;
     }
     final me = _lastLocation;
     if (me != null) {
-      await _controller?.animateCamera(CameraUpdate.newLatLngZoom(me, 16.5));
+      await _controller?.moveCamera(CameraUpdate.newLatLngZoom(me, 16.5));
       return;
     }
     _pendingInitialCenter = true;
@@ -530,13 +538,28 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
+  /// Moves the camera, instantly when [animate] is false. The first frame after
+  /// a style load is instant, so the map never flies in from its placeholder.
+  Future<void> _applyCamera(
+    CameraUpdate update, {
+    required bool animate,
+  }) async {
+    final controller = _controller;
+    if (controller == null) return;
+    if (animate) {
+      await controller.animateCamera(update);
+    } else {
+      await controller.moveCamera(update);
+    }
+  }
+
   /// Frames the group's mapping area, if it has one.
-  Future<void> _frameAoi() async {
+  Future<void> _frameAoi({bool animate = true}) async {
     final aoi = _aoiGeoJson;
     if (aoi == null) return;
     final bounds = aoiBounds(aoi);
     if (bounds == null) return;
-    await _controller?.animateCamera(
+    await _applyCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: LatLng(bounds[1], bounds[0]),
@@ -547,6 +570,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         top: 140,
         bottom: 40,
       ),
+      animate: animate,
     );
   }
 
@@ -657,7 +681,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  Future<void> _centerOnData(Map<String, dynamic> collection) async {
+  Future<void> _centerOnData(
+    Map<String, dynamic> collection, {
+    bool animate = true,
+  }) async {
     final features = collection['features'] as List;
     if (features.isEmpty) return;
     final coordinates = [
@@ -672,15 +699,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final maxLng = lngs.reduce(max);
 
     if (maxLat - minLat < 0.002 && maxLng - minLng < 0.002) {
-      await _controller?.animateCamera(
+      await _applyCamera(
         CameraUpdate.newLatLngZoom(
           LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2),
           16,
         ),
+        animate: animate,
       );
       return;
     }
-    await _controller?.animateCamera(
+    await _applyCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: LatLng(minLat, minLng),
@@ -691,6 +719,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         top: 140,
         bottom: 60,
       ),
+      animate: animate,
     );
   }
 
