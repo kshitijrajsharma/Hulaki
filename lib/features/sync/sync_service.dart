@@ -1,15 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 
+import 'package:cryptography/cryptography.dart' show SecretBoxAuthenticationError;
 import 'package:drift/drift.dart';
 import 'package:fieldchat/data/local/database.dart';
 import 'package:fieldchat/features/capture/gps_gate.dart';
 import 'package:fieldchat/features/identity/admin_roles.dart';
+import 'package:fieldchat/features/identity/identity_crypto.dart';
 import 'package:fieldchat/features/messaging/domain/message_payload.dart';
 import 'package:fieldchat/features/sync/blob_store.dart';
 import 'package:fieldchat/features/sync/group_cipher.dart';
 import 'package:fieldchat/features/sync/message_transport.dart';
 import 'package:uuid/uuid.dart';
+
+/// The outcome of verifying an envelope's author signature on ingest.
+enum _AuthResult { ok, reject, unknownSigner }
 
 /// Moves messages between the local store and the transport. Everything is
 /// written locally first (the source of truth); the network is a courier that
@@ -21,14 +27,26 @@ class SyncService {
     required this.transport,
     required this.blobStore,
     required this.currentUserId,
+    required Future<IdentityKeys> Function() identity,
     Uuid? uuid,
-  }) : _uuid = uuid ?? const Uuid();
+    Duration minRetry = const Duration(seconds: 2),
+  }) : _identityLoader = identity,
+       _uuid = uuid ?? const Uuid(),
+       _minRetry = minRetry,
+       _retryDelay = minRetry;
 
   final LocalDatabase db;
   final MessageTransport transport;
   final BlobStore blobStore;
   final String currentUserId;
+  final Future<IdentityKeys> Function() _identityLoader;
   final Uuid _uuid;
+  IdentityKeys? _identity;
+
+  /// The device identity, loaded once and cached, used to sign outgoing
+  /// envelopes so ingest on other devices can prove authorship.
+  Future<IdentityKeys> _deviceIdentity() async =>
+      _identity ??= await _identityLoader();
 
   final Map<String, StreamSubscription<Envelope>> _subscriptions = {};
   final Set<String> _caughtUp = {};
@@ -39,7 +57,13 @@ class SyncService {
   bool _draining = false;
   bool _disposed = false;
   Future<void>? _drainDone;
+  Future<void> _liveTail = Future<void>.value();
+  Timer? _retryTimer;
+  final Duration _minRetry;
+  Duration _retryDelay;
   DateTime _lastEnqueue = DateTime.fromMillisecondsSinceEpoch(0);
+
+  static const _maxRetry = Duration(minutes: 1);
 
   bool get isOnline => _online;
 
@@ -75,6 +99,8 @@ class SyncService {
   Future<void> setOnline({required bool value}) async {
     _online = value;
     if (!value) {
+      _retryTimer?.cancel();
+      _retryTimer = null;
       for (final sub in _subscriptions.values) {
         await sub.cancel();
       }
@@ -82,10 +108,31 @@ class SyncService {
       _caughtUp.clear();
       return;
     }
+    // A fresh reconnect should retry promptly, not at a backed-off delay.
+    _retryDelay = _minRetry;
     await _drain();
     for (final group in await db.activeGroups()) {
       await start(group.id);
     }
+  }
+
+  /// Serialises live envelopes and records the tail, so concurrent ingests do
+  /// not race on the cursor and dispose can await any still in flight before
+  /// the database is closed. One failing ingest never breaks the chain.
+  void _enqueueLive(Envelope envelope) {
+    _liveTail = _liveTail
+        .then((_) async {
+          if (_disposed) return;
+          await _ingest(envelope);
+        })
+        .catchError((Object error, StackTrace stack) {
+          developer.log(
+            'Live ingest failed',
+            name: 'sync',
+            error: error,
+            stackTrace: stack,
+          );
+        });
   }
 
   /// Subscribes to live envelopes for a group and pulls anything missed.
@@ -93,7 +140,7 @@ class SyncService {
     if (_disposed) return;
     _subscriptions[groupId] ??= transport
         .subscribe(groupId)
-        .listen((envelope) => unawaited(_ingest(envelope)));
+        .listen(_enqueueLive);
     _markSyncing(groupId, active: true);
     try {
       await catchUp(groupId);
@@ -111,7 +158,9 @@ class SyncService {
       ..sort((a, b) => a.seq.compareTo(b.seq));
     for (final envelope in envelopes) {
       if (_disposed) return;
-      await _ingest(envelope, applyOwnMeta: true);
+      // Stop if an author's key is not known yet: leave the cursor below this
+      // envelope so the next catch-up resumes here, rather than skipping it.
+      if (await _ingest(envelope, applyOwnMeta: true)) return;
     }
     // The group is now current: live envelopes may advance the cursor.
     _caughtUp.add(groupId);
@@ -130,6 +179,14 @@ class SyncService {
   /// in-flight fan-out re-ingests it mid-purge.
   Future<void> purgeRemote(String groupId) async {
     await stop(groupId);
+    // Remove the group's media blobs before its envelopes, so a purged group
+    // leaves nothing downloadable on the server.
+    for (final message in await db.messagesFor(groupId)) {
+      final mediaId = message.mediaId;
+      if (mediaId != null && mediaId.isNotEmpty) {
+        await blobStore.remove(mediaId);
+      }
+    }
     await transport.purgeGroup(groupId);
   }
 
@@ -139,9 +196,10 @@ class SyncService {
   Future<void> resync(String groupId) async {
     _markSyncing(groupId, active: true);
     try {
-      final envelopes = await transport.fetchSince(groupId, 0);
+      final envelopes = await transport.fetchSince(groupId, 0)
+        ..sort((a, b) => a.seq.compareTo(b.seq));
       for (final envelope in envelopes) {
-        await _ingest(envelope, applyOwnMeta: true);
+        if (await _ingest(envelope, applyOwnMeta: true)) return;
       }
     } finally {
       _markSyncing(groupId, active: false);
@@ -245,6 +303,11 @@ class SyncService {
     );
     final updated = await _rowById(messageId);
     await _enqueuePayload(_payloadFromRow(updated!));
+    // Drop the media blob too, so a deleted photo does not stay downloadable.
+    final mediaId = row.mediaId;
+    if (mediaId != null && mediaId.isNotEmpty) {
+      await blobStore.remove(mediaId);
+    }
   }
 
   /// Publishes group metadata (name, hot-keys, area) so members joining by
@@ -356,26 +419,60 @@ class SyncService {
     final completer = Completer<void>();
     _drainDone = completer.future;
     try {
-      for (final entry in await db.outboxEntries()) {
-        if (_disposed) break;
-        final key = await _groupKey(entry.groupId);
-        if (key == null) {
-          // The group is gone; the entry can never publish, so drop it.
-          await db.deleteOutbox(entry.id);
-          continue;
-        }
-        try {
-          await _drainEntry(entry, key);
-        } on Exception {
-          // A transport, storage or encoding failure on one entry must not
-          // block the rest. Leave it queued and retry on the next drain.
-          continue;
+      // Re-check the outbox after each pass. Entries enqueued while this drain
+      // was running are sent here rather than waiting for the next trigger.
+      // Stop once a pass sends nothing, so a down transport does not spin; the
+      // backoff timer retries instead.
+      var progressed = true;
+      while (progressed && !_disposed) {
+        progressed = false;
+        final entries = await db.outboxEntries();
+        if (entries.isEmpty) break;
+        for (final entry in entries) {
+          if (_disposed) break;
+          final key = await _groupKey(entry.groupId);
+          if (key == null) {
+            // The group is gone; the entry can never publish, so drop it.
+            await db.deleteOutbox(entry.id);
+            progressed = true;
+            continue;
+          }
+          try {
+            await _drainEntry(entry, key);
+            progressed = true;
+          } on Exception {
+            // A transport, storage or encoding failure on one entry must not
+            // block the rest. Leave it queued for the backoff retry.
+            continue;
+          }
         }
       }
     } finally {
       _draining = false;
       completer.complete();
     }
+    await _scheduleRetryIfPending();
+  }
+
+  /// Arms a backoff retry when the outbox still holds entries after a drain, so
+  /// a send that failed (offline, or a flaky transport) is retried instead of
+  /// sitting on "pending" forever. Clears once the outbox drains.
+  Future<void> _scheduleRetryIfPending() async {
+    if (_disposed) return;
+    final pending = await db.outboxEntries();
+    if (pending.isEmpty || !_online) {
+      _retryDelay = _minRetry;
+      _retryTimer?.cancel();
+      _retryTimer = null;
+      return;
+    }
+    if (_retryTimer != null) return;
+    _retryTimer = Timer(_retryDelay, () {
+      _retryTimer = null;
+      final next = _retryDelay * 2;
+      _retryDelay = next < _maxRetry ? next : _maxRetry;
+      unawaited(_drain());
+    });
   }
 
   Future<void> _drainEntry(OutboxData entry, Uint8List key) async {
@@ -397,7 +494,12 @@ class SyncService {
       }
     }
 
-    final ciphertext = await GroupCipher.encryptJson(payload.toJson(), key);
+    // Sign the payload so ingest on other devices can prove this author and
+    // reject anything spoofed or injected by a non-member.
+    final identity = await _deviceIdentity();
+    final signed = payload.toJson()
+      ..['sig'] = base64Encode(await identity.sign(payload.bytesToSign()));
+    final ciphertext = await GroupCipher.encryptJson(signed, key);
     final seq = await transport.publish(
       Envelope(
         groupId: payload.groupId,
@@ -419,27 +521,42 @@ class SyncService {
     await db.deleteOutbox(entry.id);
   }
 
-  Future<void> _ingest(Envelope envelope, {bool applyOwnMeta = false}) async {
-    if (_disposed) return;
-    // Process (decrypt + persist) before advancing the cursor. If anything
-    // throws, the cursor stays put so catch-up retries this envelope rather
-    // than skipping it and losing the observation for good.
-    final mine = envelope.senderId == currentUserId;
+  /// Applies one envelope. Returns true when the author's signing key is not
+  /// known yet, so the caller must stop and not advance past this seq (a later
+  /// pass re-runs it with the key known); false otherwise.
+  Future<bool> _ingest(Envelope envelope, {bool applyOwnMeta = false}) async {
+    if (_disposed) return false;
+    // Process (decrypt + persist) before advancing the cursor. A transient
+    // failure (no key yet, or a persist error) throws and holds the cursor so
+    // catch-up retries the envelope; only a permanently undecryptable row is
+    // dropped so it cannot wedge the group forever.
     final key = await _groupKey(envelope.groupId);
-    if (key == null && !mine) return; // no key yet: retry, do not advance.
+    if (key == null && envelope.senderId != currentUserId) {
+      return false; // no group key yet: retry, do not advance.
+    }
     if (key != null) {
-      final payload = MessagePayload.fromJson(
-        await GroupCipher.decryptJson(envelope.ciphertext, key),
-      );
-      final isMeta = payload.kind == MessageKind.groupMeta;
-      // Own envelopes are reapplied only during catch-up, so a rejoined device
-      // restores its own tags, settings and points. The live path skips them so
-      // a returning echo cannot clobber fresh local state.
-      final apply = !mine || applyOwnMeta;
-      if (isMeta && apply) {
-        await _applyGroupMeta(payload);
-      } else if (!isMeta && apply) {
-        await _ingestFromOther(payload, envelope);
+      final payload = await _tryDecrypt(envelope, key);
+      if (payload != null) {
+        final auth = await _verifyAuthor(payload);
+        // The author's key has not arrived yet (its announce is still ahead in
+        // seq). Signal a hold so the caller stops before advancing past it,
+        // rather than letting a later envelope skip it.
+        if (auth == _AuthResult.unknownSigner) return true;
+        if (auth == _AuthResult.ok) {
+          final mine = payload.senderId == currentUserId;
+          final isMeta = payload.kind == MessageKind.groupMeta;
+          // Own envelopes are reapplied only during catch-up, so a rejoined
+          // device restores its own tags, settings and points. The live path
+          // skips them so a returning echo cannot clobber fresh local state.
+          final apply = !mine || applyOwnMeta;
+          if (isMeta && apply) {
+            await _applyGroupMeta(payload);
+          } else if (!isMeta && apply) {
+            await _ingestFromOther(payload, envelope);
+          }
+        }
+        // A rejected (unsigned, mis-signed, or identity-swapping) envelope
+        // falls through and the cursor advances, dropping it.
       }
     }
 
@@ -451,6 +568,96 @@ class SyncService {
     if (advance && envelope.seq > current) {
       await db.setCursor(envelope.groupId, envelope.seq);
     }
+    return false;
+  }
+
+  /// Decrypts one envelope, or returns null for a row that cannot be
+  /// authenticated or parsed under the group key. The relay accepts inserts
+  /// from any signed-in device, so a corrupt or hostile row can appear.
+  /// Dropping just that one (and letting the cursor advance past it) keeps a
+  /// single poison envelope from wedging the group's catch-up for every member.
+  Future<MessagePayload?> _tryDecrypt(Envelope envelope, Uint8List key) async {
+    try {
+      return MessagePayload.fromJson(
+        await GroupCipher.decryptJson(envelope.ciphertext, key),
+      );
+    } on SecretBoxAuthenticationError catch (error) {
+      developer.log(
+        'Dropping unauthenticated envelope in ${envelope.groupId}',
+        name: 'sync',
+        error: error,
+      );
+    } on FormatException catch (error) {
+      developer.log(
+        'Dropping malformed envelope in ${envelope.groupId}',
+        name: 'sync',
+        error: error,
+      );
+    }
+    return null;
+  }
+
+  /// Checks that an envelope's signature proves its claimed sender, so a member
+  /// key holder cannot forge another author and a non-member cannot inject at
+  /// all. Returns `unknownSigner` when the author's key is not known yet
+  /// (transient: hold and retry), and `reject` for an unsigned, mis-signed, or
+  /// identity-swapping envelope (drop it).
+  Future<_AuthResult> _verifyAuthor(MessagePayload payload) async {
+    final sig = payload.sig;
+    if (sig == null) {
+      developer.log(
+        'Dropping unsigned envelope in ${payload.groupId}',
+        name: 'sync',
+      );
+      return _AuthResult.reject;
+    }
+    if (payload.kind == MessageKind.identityAnnounce) {
+      return _verifyAnnounce(payload, sig);
+    }
+    final knownKey = (await db.profileById(payload.senderId))?.signingKey;
+    if (knownKey == null) return _AuthResult.unknownSigner;
+    return await _verifySig(payload, sig, knownKey)
+        ? _AuthResult.ok
+        : _AuthResult.reject;
+  }
+
+  /// An announce is self-signed: it proves possession of the key it carries.
+  /// Trust on first use anchors that key to the sender id, so a later announce
+  /// may not swap it and no one can hijack another member's id.
+  Future<_AuthResult> _verifyAnnounce(
+    MessagePayload payload,
+    String sig,
+  ) async {
+    final body = jsonDecode(payload.body ?? '{}') as Map<String, dynamic>;
+    final announced = body['signingKey'] as String?;
+    if (announced == null || !(await _verifySig(payload, sig, announced))) {
+      developer.log(
+        'Dropping unverifiable announce from ${payload.senderId}',
+        name: 'sync',
+      );
+      return _AuthResult.reject;
+    }
+    final existing = (await db.profileById(payload.senderId))?.signingKey;
+    if (existing != null && existing != announced) {
+      developer.log(
+        'Rejecting announce that changes the key for ${payload.senderId}',
+        name: 'sync',
+      );
+      return _AuthResult.reject;
+    }
+    return _AuthResult.ok;
+  }
+
+  Future<bool> _verifySig(
+    MessagePayload payload,
+    String sig,
+    String signerKeyB64,
+  ) {
+    return IdentityKeys.verify(
+      payload.bytesToSign(),
+      signature: base64Decode(sig),
+      signerPublic: base64Decode(signerKeyB64),
+    );
   }
 
   /// Applies an envelope authored by another member: a control message, an
@@ -784,12 +991,17 @@ class SyncService {
 
   Future<void> dispose() async {
     _disposed = true;
+    _retryTimer?.cancel();
+    _retryTimer = null;
     // Let an in-flight drain finish its current write before the caller closes
     // the database, so a detached publish never lands after teardown.
     await _drainDone;
     for (final sub in _subscriptions.values) {
       await sub.cancel();
     }
+    // No new live envelopes can arrive now; wait for any still being ingested
+    // so none touches the database after the caller closes it.
+    await _liveTail;
     await _syncingController.close();
   }
 }

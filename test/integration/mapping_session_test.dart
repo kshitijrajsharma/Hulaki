@@ -21,18 +21,20 @@ import 'package:xml/xml.dart';
 /// One simulated member: their own device store and sync engine, all talking
 /// through the shared transport and blob store (the stand-in server).
 class Client {
-  Client(this.userId, MessageTransportBundle server)
+  Client(this.userId, this.identity, MessageTransportBundle server)
     : db = LocalDatabase(NativeDatabase.memory()) {
     sync = SyncService(
       db: db,
       transport: server.transport,
       blobStore: server.blobStore,
       currentUserId: userId,
+      identity: () async => identity,
     );
     groups = GroupService(db: db, sync: sync, currentUserId: userId);
   }
 
   final String userId;
+  final IdentityKeys identity;
   final LocalDatabase db;
   late final SyncService sync;
   late final GroupService groups;
@@ -78,9 +80,9 @@ void main() {
       InMemoryTransport(),
       InMemoryBlobStore(),
     );
-    final you = Client('you', server);
-    final asha = Client('asha', server);
-    final tomas = Client('tomas', server);
+    final you = Client('you', await IdentityKeys.generate(), server);
+    final asha = Client('asha', await IdentityKeys.generate(), server);
+    final tomas = Client('tomas', await IdentityKeys.generate(), server);
     addTearDown(() async {
       await you.dispose();
       await asha.dispose();
@@ -91,7 +93,7 @@ void main() {
     // 1. Create a group with hot-keys and a drawn AOI.
     final group = await you.groups.createGroup(
       name: 'Ward 7 · Litter survey',
-      identity: await IdentityKeys.generate(),
+      identity: you.identity,
       aoiGeoJson: _aoiGeoJson,
       hotKeys: const [
         HotKeySpec(label: 'Trash', colorValue: 0xFF15181B),
@@ -104,8 +106,8 @@ void main() {
 
     // 2. Others join by invite link and receive the metadata + hot-keys + AOI.
     final link = you.groups.inviteLinkFor(group);
-    await asha.groups.joinViaLink(link, await IdentityKeys.generate());
-    await tomas.groups.joinViaLink(link, await IdentityKeys.generate());
+    await asha.groups.joinViaLink(link, asha.identity);
+    await tomas.groups.joinViaLink(link, tomas.identity);
     await waitFor(
       () async =>
           (await asha.db.groupById(group.id))?.name == group.name &&

@@ -3,12 +3,15 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 
-/// Authenticated encryption for group content. Each group holds a symmetric
-/// key, shared out of band through the invite link and never sent to the
-/// server. The transport and blob store only ever see the output here.
+/// Authenticated encryption for group content. Each group holds one static
+/// symmetric key for its whole life, shared out of band through the invite link
+/// and never sent to the server. The transport and blob store only ever see the
+/// output here.
 ///
-/// This is the encryption seam: the Signal sender-key ratchet (forward
-/// secrecy, per-member rotation) slots in behind the same call sites later.
+/// There is no forward secrecy or key rotation here: the Signal sender-key
+/// ratchet that would add them is a future drop-in behind these same call
+/// sites, not yet wired in. Authorship instead comes from the per-envelope
+/// Ed25519 signature applied in the sync service.
 class GroupCipher {
   GroupCipher._();
 
@@ -36,6 +39,12 @@ class GroupCipher {
     Uint8List combined,
     Uint8List key,
   ) async {
+    // Reject a too-short blob as malformed input rather than letting the
+    // library throw an ArgumentError, so callers handling untrusted ciphertext
+    // catch one Exception type.
+    if (combined.length < _algorithm.nonceLength + _macLength) {
+      throw const FormatException('ciphertext too short to authenticate');
+    }
     final box = SecretBox.fromConcatenation(
       combined,
       nonceLength: _algorithm.nonceLength,

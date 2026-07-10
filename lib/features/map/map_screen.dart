@@ -98,6 +98,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Map<String, HotKey> _hotKeysById = const {};
   List<_LegendEntry> _legend = const [];
   final Set<String> _hiddenTags = {};
+  bool _mineOnly = false;
 
   static const _othersKey = '__others__';
 
@@ -291,11 +292,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     backLabel: widget.backLabel,
                   ),
                   const SizedBox(height: 8),
-                  Material(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(11),
-                    elevation: 2,
-                    child: const LiveGpsStrip(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Material(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(11),
+                          elevation: 2,
+                          child: const LiveGpsStrip(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _MineAllToggle(
+                        mineOnly: _mineOnly,
+                        onChanged: _setMineOnly,
+                      ),
+                    ],
                   ),
                   const CoachTip(
                     tipKey: 'map',
@@ -556,28 +568,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  /// Moves the camera, instantly when [animate] is false. The first frame after
-  /// a style load is instant, so the map never flies in from its placeholder.
-  Future<void> _applyCamera(
-    CameraUpdate update, {
-    required bool animate,
-  }) async {
-    final controller = _controller;
-    if (controller == null) return;
-    if (animate) {
-      await controller.animateCamera(update);
-    } else {
-      await controller.moveCamera(update);
-    }
-  }
-
   /// Frames the group's mapping area, if it has one.
-  Future<void> _frameAoi({bool animate = true}) async {
+  Future<void> _frameAoi() async {
     final aoi = _aoiGeoJson;
     if (aoi == null) return;
     final bounds = aoiBounds(aoi);
     if (bounds == null) return;
-    await _applyCamera(
+    await _controller?.animateCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: LatLng(bounds[1], bounds[0]),
@@ -588,7 +585,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         top: 140,
         bottom: 40,
       ),
-      animate: animate,
     );
   }
 
@@ -710,10 +706,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _centerOnData(
-    Map<String, dynamic> collection, {
-    bool animate = true,
-  }) async {
+  Future<void> _centerOnData(Map<String, dynamic> collection) async {
     final features = collection['features'] as List;
     if (features.isEmpty) return;
     final coordinates = [
@@ -728,16 +721,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final maxLng = lngs.reduce(max);
 
     if (maxLat - minLat < 0.002 && maxLng - minLng < 0.002) {
-      await _applyCamera(
+      await _controller?.animateCamera(
         CameraUpdate.newLatLngZoom(
           LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2),
           16,
         ),
-        animate: animate,
       );
       return;
     }
-    await _applyCamera(
+    await _controller?.animateCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: LatLng(minLat, minLng),
@@ -748,7 +740,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         top: 140,
         bottom: 60,
       ),
-      animate: animate,
     );
   }
 
@@ -793,6 +784,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  /// Switches the map between everyone's points and only the current user's.
+  void _setMineOnly(bool value) {
+    if (value == _mineOnly) return;
+    setState(() => _mineOnly = value);
+    unawaited(_refreshPins());
+  }
+
   /// Shows or hides a tag's points on the map from the legend.
   Future<void> _toggleTag(String key) async {
     setState(() {
@@ -803,7 +801,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<Map<String, dynamic>> _featureCollection() async {
     final db = ref.read(databaseProvider);
-    final messages = await db.messagesFor(widget.groupId);
+    final all = await db.messagesFor(widget.groupId);
+    // The Mine/All switch filters the map (and its legend counts) by author.
+    final selfId = ref.read(currentUserIdProvider);
+    final messages = _mineOnly
+        ? [for (final m in all) if (m.senderId == selfId) m]
+        : all;
     final hotKeys = await db.hotKeysFor(widget.groupId);
     final hotKeyIds = {for (final h in hotKeys) h.id};
 
@@ -962,6 +965,60 @@ class _MapLoadingChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A compact segmented switch to filter the map between everyone's points and
+/// only the current user's.
+class _MineAllToggle extends StatelessWidget {
+  const _MineAllToggle({required this.mineOnly, required this.onChanged});
+
+  final bool mineOnly;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(11),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _segment('All', selected: !mineOnly, onTap: () => onChanged(false)),
+            _segment('Mine', selected: mineOnly, onTap: () => onChanged(true)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _segment(
+    String label, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.ink : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? AppColors.white : AppColors.textMuted,
+          ),
         ),
       ),
     );

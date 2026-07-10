@@ -101,18 +101,24 @@ class _ReverseTransport implements MessageTransport {
 
 /// One simulated device: its own store and sync engine on a shared relay.
 class _Device {
-  _Device(this.userId, MessageTransport transport, InMemoryBlobStore blobs)
-    : db = LocalDatabase(NativeDatabase.memory()) {
+  _Device(
+    this.userId,
+    this.identity,
+    MessageTransport transport,
+    InMemoryBlobStore blobs,
+  ) : db = LocalDatabase(NativeDatabase.memory()) {
     sync = SyncService(
       db: db,
       transport: transport,
       blobStore: blobs,
       currentUserId: userId,
+      identity: () async => identity,
     );
     groups = GroupService(db: db, sync: sync, currentUserId: userId);
   }
 
   final String userId;
+  final IdentityKeys identity;
   final LocalDatabase db;
   late final SyncService sync;
   late final GroupService groups;
@@ -133,6 +139,19 @@ Future<void> _waitFor(
   }
   fail('condition was not met in time');
 }
+
+Future<_Device> _makeDevice(
+  String userId,
+  MessageTransport transport,
+  InMemoryBlobStore blobs, {
+  IdentityKeys? identity,
+}) async =>
+    _Device(
+      userId,
+      identity ?? await IdentityKeys.generate(),
+      transport,
+      blobs,
+    );
 
 Future<Set<String>> _tagLabels(_Device device, String groupId) async =>
     (await device.db.hotKeysFor(groupId)).map((t) => t.label).toSet();
@@ -159,8 +178,8 @@ void main() {
   test('a joiner sees the admin edited tags, not create defaults', () async {
     final transport = InMemoryTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
-    final joiner = _Device('joiner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
+    final joiner = await _makeDevice('joiner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await joiner.dispose();
@@ -169,7 +188,7 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Ward survey',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [
         HotKeySpec(label: 'Trash', colorValue: 0xFF15181B, iconName: 'delete'),
         HotKeySpec(label: 'Crossings', colorValue: 0xFFC0801F),
@@ -182,7 +201,7 @@ void main() {
 
     await joiner.groups.joinViaLink(
       owner.groups.inviteLinkFor(group),
-      await IdentityKeys.generate(),
+      joiner.identity,
     );
 
     await _waitFor(() async {
@@ -195,8 +214,8 @@ void main() {
   test('tags survive a leave, rejoin, edit, then leave and rejoin', () async {
     final transport = InMemoryTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
-    final joiner = _Device('joiner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
+    final joiner = await _makeDevice('joiner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await joiner.dispose();
@@ -205,18 +224,18 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Trail audit',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [HotKeySpec(label: 'One', colorValue: 0xFF15181B)],
     );
     final link = owner.groups.inviteLinkFor(group);
 
-    await joiner.groups.joinViaLink(link, await IdentityKeys.generate());
+    await joiner.groups.joinViaLink(link, joiner.identity);
     await _waitForLabels(joiner, group.id, {'One'}, 'first join');
 
     await joiner.groups.leaveGroup(group.id);
     expect(await joiner.db.groupById(group.id), isNull);
 
-    await joiner.groups.joinViaLink(link, await IdentityKeys.generate());
+    await joiner.groups.joinViaLink(link, joiner.identity);
     await _waitForLabels(joiner, group.id, {'One'}, 'rejoin restores One');
 
     await owner.groups.updateHotKeys(group.id, [
@@ -225,15 +244,15 @@ void main() {
     await _waitForLabels(joiner, group.id, {'Two'}, 'live edit to Two');
 
     await joiner.groups.leaveGroup(group.id);
-    await joiner.groups.joinViaLink(link, await IdentityKeys.generate());
+    await joiner.groups.joinViaLink(link, joiner.identity);
     await _waitForLabels(joiner, group.id, {'Two'}, 'rejoin restores Two');
   });
 
   test('a located point from the admin reaches a joiner', () async {
     final transport = InMemoryTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
-    final joiner = _Device('joiner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
+    final joiner = await _makeDevice('joiner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await joiner.dispose();
@@ -242,12 +261,12 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Riverside',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [],
     );
     await joiner.groups.joinViaLink(
       owner.groups.inviteLinkFor(group),
-      await IdentityKeys.generate(),
+      joiner.identity,
     );
 
     await owner.sync.sendText(
@@ -268,7 +287,7 @@ void main() {
   test('a rejoin keeps tags and points when a warm channel echoes', () async {
     final transport = _WarmTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await transport.dispose();
@@ -276,7 +295,7 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Ward',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [
         HotKeySpec(label: 'Alpha', colorValue: 0xFF3C7A4E),
         HotKeySpec(label: 'Beta', colorValue: 0xFF3466A0),
@@ -291,11 +310,16 @@ void main() {
       senderName: 'owner',
     );
 
-    final rejoined = _Device('owner', transport, blobs);
+    final rejoined = await _makeDevice(
+      'owner',
+      transport,
+      blobs,
+      identity: owner.identity,
+    );
     addTearDown(rejoined.dispose);
     await rejoined.groups.joinViaLink(
       owner.groups.inviteLinkFor(group),
-      await IdentityKeys.generate(),
+      owner.identity,
     );
 
     await _waitFor(() async {
@@ -312,8 +336,8 @@ void main() {
   test('the latest edit wins when catch-up returns newest-first', () async {
     final transport = _ReverseTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
-    final joiner = _Device('joiner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
+    final joiner = await _makeDevice('joiner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await joiner.dispose();
@@ -322,7 +346,7 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Ward',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [HotKeySpec(label: 'Old', colorValue: 0xFF15181B)],
     );
     await owner.groups.setMappingArea(
@@ -337,7 +361,7 @@ void main() {
 
     await joiner.groups.joinViaLink(
       owner.groups.inviteLinkFor(group),
-      await IdentityKeys.generate(),
+      joiner.identity,
     );
 
     await _waitFor(() async {

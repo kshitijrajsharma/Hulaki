@@ -19,11 +19,13 @@ void main() {
 
   test('project zip bundles media, geojson, manifest and readme', () async {
     final db = LocalDatabase(NativeDatabase.memory());
+    final identity = await IdentityKeys.generate();
     final sync = SyncService(
       db: db,
       transport: InMemoryTransport(),
       blobStore: InMemoryBlobStore(),
       currentUserId: 'you',
+      identity: () async => identity,
     );
     final groups = GroupService(db: db, sync: sync, currentUserId: 'you');
     addTearDown(() async {
@@ -33,7 +35,7 @@ void main() {
 
     final group = await groups.createGroup(
       name: 'Ward 7 · Litter survey',
-      identity: await IdentityKeys.generate(),
+      identity: identity,
       hotKeys: const [HotKeySpec(label: 'Trash', colorValue: 0xFF15181B)],
     );
     final trash = (await db.hotKeysFor(group.id)).first.id;
@@ -96,11 +98,13 @@ void main() {
 
   test('project zip bundles the track as GPX when one is recorded', () async {
     final db = LocalDatabase(NativeDatabase.memory());
+    final identity = await IdentityKeys.generate();
     final sync = SyncService(
       db: db,
       transport: InMemoryTransport(),
       blobStore: InMemoryBlobStore(),
       currentUserId: 'you',
+      identity: () async => identity,
     );
     final groups = GroupService(db: db, sync: sync, currentUserId: 'you');
     addTearDown(() async {
@@ -110,7 +114,7 @@ void main() {
 
     final group = await groups.createGroup(
       name: 'Ward 7 · Litter survey',
-      identity: await IdentityKeys.generate(),
+      identity: identity,
       hotKeys: const [HotKeySpec(label: 'Trash', colorValue: 0xFF15181B)],
     );
 

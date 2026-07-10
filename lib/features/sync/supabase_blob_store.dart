@@ -28,12 +28,24 @@ class SupabaseBlobStore implements BlobStore {
     } on StorageException catch (error) {
       // A missing object is reported as a 400 whose body carries a 404
       // not-found; treat that as absent rather than an error.
-      if (error.statusCode == '404' ||
-          error.message.contains('not_found') ||
-          error.message.contains('not found')) {
-        return null;
-      }
+      if (_isNotFound(error)) return null;
       rethrow;
     }
   }
+
+  @override
+  Future<void> remove(String id) async {
+    try {
+      await _client.storage.from(bucket).remove([id]);
+    } on StorageException catch (error) {
+      // Deleting an already-absent blob is a no-op, not a failure.
+      if (_isNotFound(error)) return;
+      rethrow;
+    }
+  }
+
+  bool _isNotFound(StorageException error) =>
+      error.statusCode == '404' ||
+      error.message.contains('not_found') ||
+      error.message.contains('not found');
 }

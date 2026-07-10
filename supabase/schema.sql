@@ -46,6 +46,13 @@ create policy media_read on storage.objects
 create policy media_write on storage.objects
   for insert to authenticated with check (bucket_id = 'media');
 
+-- Delete lets a client drop a blob when its message is deleted or its group is
+-- purged, so removed media does not linger. Same open MVP posture as the other
+-- policies: any signed-in device may delete, and confidentiality still rests on
+-- end-to-end encryption, not on the store.
+create policy media_delete on storage.objects
+  for delete to authenticated using (bucket_id = 'media');
+
 -- The public directory: groups their admins chose to make discoverable. This
 -- holds plaintext metadata plus the group key, so anyone nearby can find and
 -- join. Private groups never appear here. The geo index keeps proximity search

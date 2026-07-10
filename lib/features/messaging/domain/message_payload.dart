@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// What a message can carry. The trailing kinds are control messages, not
 /// chat: identity announces a member's public keys, and the admin pair drives
 /// the signed promotion handshake.
@@ -38,6 +40,7 @@ class MessagePayload {
     this.replyToId,
     this.editedAtMs,
     this.deletedAtMs,
+    this.sig,
   });
 
   factory MessagePayload.fromJson(Map<String, dynamic> json) => MessagePayload(
@@ -63,6 +66,7 @@ class MessagePayload {
     replyToId: json['replyToId'] as String?,
     editedAtMs: json['editedAtMs'] as int?,
     deletedAtMs: json['deletedAtMs'] as int?,
+    sig: json['sig'] as String?,
   );
 
   final String id;
@@ -88,6 +92,18 @@ class MessagePayload {
   final int? editedAtMs;
   final int? deletedAtMs;
 
+  /// Base64 Ed25519 signature over [bytesToSign], set by the sending device so
+  /// ingest can prove authorship. Absent only on a payload about to be signed.
+  final String? sig;
+
+  /// The exact bytes an author signs: the payload's JSON without the signature
+  /// itself. The signer and the verifier both derive it this way, so the
+  /// signature binds every other field including [senderId].
+  List<int> bytesToSign() {
+    final json = toJson()..remove('sig');
+    return utf8.encode(jsonEncode(json));
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'groupId': groupId,
@@ -111,5 +127,6 @@ class MessagePayload {
     if (replyToId != null) 'replyToId': replyToId,
     if (editedAtMs != null) 'editedAtMs': editedAtMs,
     if (deletedAtMs != null) 'deletedAtMs': deletedAtMs,
+    if (sig != null) 'sig': sig,
   };
 }

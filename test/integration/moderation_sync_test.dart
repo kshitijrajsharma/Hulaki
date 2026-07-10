@@ -12,18 +12,24 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// One simulated device: its own store and sync engine on a shared relay.
 class _Device {
-  _Device(this.userId, InMemoryTransport transport, InMemoryBlobStore blobs)
-    : db = LocalDatabase(NativeDatabase.memory()) {
+  _Device(
+    this.userId,
+    this.identity,
+    InMemoryTransport transport,
+    InMemoryBlobStore blobs,
+  ) : db = LocalDatabase(NativeDatabase.memory()) {
     sync = SyncService(
       db: db,
       transport: transport,
       blobStore: blobs,
       currentUserId: userId,
+      identity: () async => identity,
     );
     groups = GroupService(db: db, sync: sync, currentUserId: userId);
   }
 
   final String userId;
+  final IdentityKeys identity;
   final LocalDatabase db;
   late final SyncService sync;
   late final GroupService groups;
@@ -33,6 +39,19 @@ class _Device {
     await db.close();
   }
 }
+
+Future<_Device> _makeDevice(
+  String userId,
+  InMemoryTransport transport,
+  InMemoryBlobStore blobs, {
+  IdentityKeys? identity,
+}) async =>
+    _Device(
+      userId,
+      identity ?? await IdentityKeys.generate(),
+      transport,
+      blobs,
+    );
 
 Future<void> _waitFor(
   Future<bool> Function() condition, {
@@ -51,8 +70,8 @@ void main() {
   test('moderation settings propagate to a joiner', () async {
     final transport = InMemoryTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
-    final joiner = _Device('joiner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
+    final joiner = await _makeDevice('joiner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await joiner.dispose();
@@ -61,11 +80,11 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Ward survey',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [],
     );
     final link = owner.groups.inviteLinkFor(group);
-    await joiner.groups.joinViaLink(link, await IdentityKeys.generate());
+    await joiner.groups.joinViaLink(link, joiner.identity);
 
     await owner.groups.setAllowMemberExport(group.id, value: true);
     await owner.groups.setAllowMemberPlace(group.id, value: false);
@@ -87,7 +106,7 @@ void main() {
   test("an admin's own tags return after rejoining", () async {
     final transport = InMemoryTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await transport.dispose();
@@ -95,7 +114,7 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Ward tags',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [
         HotKeySpec(label: 'Tree', colorValue: 0xFF3C7A4E, iconName: 'park'),
         HotKeySpec(label: 'Bin', colorValue: 0xFF15181B, iconName: 'delete'),
@@ -106,11 +125,16 @@ void main() {
 
     // The same user reinstalls: a fresh device with the same id rejoins by
     // link. The tags live only in that user's own published meta.
-    final rejoined = _Device('owner', transport, blobs);
+    final rejoined = await _makeDevice(
+      'owner',
+      transport,
+      blobs,
+      identity: owner.identity,
+    );
     addTearDown(rejoined.dispose);
     await rejoined.groups.joinViaLink(
       owner.groups.inviteLinkFor(group),
-      await IdentityKeys.generate(),
+      owner.identity,
     );
 
     await _waitFor(() async {
@@ -124,8 +148,8 @@ void main() {
   test('defaults hold on a fresh group and survive a round-trip', () async {
     final transport = InMemoryTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
-    final joiner = _Device('joiner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
+    final joiner = await _makeDevice('joiner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await joiner.dispose();
@@ -134,7 +158,7 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Trail audit',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [],
     );
     final created = await owner.db.groupById(group.id);
@@ -144,7 +168,7 @@ void main() {
     expect(created.gpsLimitM, isNull);
 
     final link = owner.groups.inviteLinkFor(group);
-    await joiner.groups.joinViaLink(link, await IdentityKeys.generate());
+    await joiner.groups.joinViaLink(link, joiner.identity);
 
     await _waitFor(() async {
       final g = await joiner.db.groupById(group.id);
@@ -159,8 +183,8 @@ void main() {
   test('a mapping area set after creation reaches a joiner', () async {
     final transport = InMemoryTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
-    final joiner = _Device('joiner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
+    final joiner = await _makeDevice('joiner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await joiner.dispose();
@@ -169,12 +193,12 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Ridge survey',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [],
     );
     expect((await owner.db.groupById(group.id))?.aoiGeoJson, isNull);
     final link = owner.groups.inviteLinkFor(group);
-    await joiner.groups.joinViaLink(link, await IdentityKeys.generate());
+    await joiner.groups.joinViaLink(link, joiner.identity);
 
     const aoi =
         '{"type":"Feature","geometry":{"type":"Polygon","coordinates":'
@@ -191,8 +215,8 @@ void main() {
   test('a cover photo set by the owner reaches a joiner', () async {
     final transport = InMemoryTransport();
     final blobs = InMemoryBlobStore();
-    final owner = _Device('owner', transport, blobs);
-    final joiner = _Device('joiner', transport, blobs);
+    final owner = await _makeDevice('owner', transport, blobs);
+    final joiner = await _makeDevice('joiner', transport, blobs);
     addTearDown(() async {
       await owner.dispose();
       await joiner.dispose();
@@ -201,11 +225,11 @@ void main() {
 
     final group = await owner.groups.createGroup(
       name: 'Harbour survey',
-      identity: await IdentityKeys.generate(),
+      identity: owner.identity,
       hotKeys: const [],
     );
     final link = owner.groups.inviteLinkFor(group);
-    await joiner.groups.joinViaLink(link, await IdentityKeys.generate());
+    await joiner.groups.joinViaLink(link, joiner.identity);
 
     final photo = Uint8List.fromList(List<int>.generate(64, (i) => i % 256));
     await owner.groups.updateGroupPhoto(group.id, photo);

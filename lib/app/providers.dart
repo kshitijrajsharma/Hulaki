@@ -84,6 +84,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     transport: ref.watch(transportProvider),
     blobStore: ref.watch(blobStoreProvider),
     currentUserId: ref.watch(currentUserIdProvider),
+    identity: () => ref.read(deviceIdentityProvider.future),
   );
   ref.onDispose(service.dispose);
   return service;

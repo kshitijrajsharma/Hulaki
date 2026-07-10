@@ -132,12 +132,12 @@ class GroupService {
     }
 
     await _addMembership(id, role: 'admin');
-    // The group is durable locally now. Publish its metadata before returning,
-    // so it is the first envelope: a later tag edit must not outrun it and let
-    // the original tags prune the edit on other devices. The identity announce
-    // follows, then the live subscription starts.
-    await _publishFullMeta(id);
+    // Announce this device's keys first, so its signing key is the first
+    // envelope and is known before any content it authors is verified on other
+    // devices. The full meta follows; it still precedes any later tag edit, so
+    // an edit cannot be pruned back to the original tags on other devices.
     await announceIdentity(id, identity);
+    await _publishFullMeta(id);
     await sync.start(id);
 
     return (await db.groupById(id))!;

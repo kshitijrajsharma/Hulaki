@@ -132,14 +132,43 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
-class _Photo extends StatelessWidget {
+class _Photo extends StatefulWidget {
   const _Photo(this.bubble);
 
   final MessageBubble bubble;
 
   @override
+  State<_Photo> createState() => _PhotoState();
+}
+
+class _PhotoState extends State<_Photo> {
+  // Resolved once and reused, so the thread restreaming on every new message
+  // does not re-read and re-decode every visible photo's bytes each rebuild.
+  Future<Uint8List?>? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(_Photo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bubble.message.mediaId != widget.bubble.message.mediaId) {
+      _resolve();
+    }
+  }
+
+  void _resolve() {
+    final resolver = widget.bubble.mediaResolver;
+    final mediaId = widget.bubble.message.mediaId;
+    _bytes = resolver != null && mediaId != null ? resolver(mediaId) : null;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final resolver = bubble.mediaResolver;
+    final bubble = widget.bubble;
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Stack(
@@ -147,16 +176,22 @@ class _Photo extends StatelessWidget {
           SizedBox(
             width: 220,
             height: 130,
-            child: resolver == null
+            child: _bytes == null
                 ? const ColoredBox(color: AppColors.mist)
                 : FutureBuilder<Uint8List?>(
-                    future: resolver(bubble.message.mediaId!),
+                    future: _bytes,
                     builder: (context, snapshot) {
                       final bytes = snapshot.data;
                       if (bytes == null) {
                         return const ColoredBox(color: AppColors.mist);
                       }
-                      return Image.memory(bytes, fit: BoxFit.cover);
+                      // The bubble is 220 wide; decode near that, not the
+                      // stored full resolution, to save memory and jank.
+                      return Image.memory(
+                        bytes,
+                        fit: BoxFit.cover,
+                        cacheWidth: 440,
+                      );
                     },
                   ),
           ),

@@ -736,8 +736,7 @@ class _HotKeyBar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (hotKeys.isEmpty) return const SizedBox.shrink();
     final showMore = hotKeys.length > 6;
-    final chips = Container(
-      color: AppColors.white,
+    final chips = Padding(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       child: SizedBox(
         height: 36,

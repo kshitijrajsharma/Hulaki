@@ -20,6 +20,7 @@ class Device {
       transport: transport,
       blobStore: blobs,
       currentUserId: userId,
+      identity: () async => identity,
     );
     groups = GroupService(db: db, sync: sync, currentUserId: userId);
   }
