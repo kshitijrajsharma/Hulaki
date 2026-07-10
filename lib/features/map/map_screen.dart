@@ -88,6 +88,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _paintedOnce = false;
   bool _pointsSettled = false;
   bool _satellite = false;
+  final Set<String> _pinImageKeys = {};
   String? _aoiGeoJson;
   bool _canPlace = true;
   bool _dataInView = true;
@@ -104,6 +105,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   void initState() {
     super.initState();
     unawaited(_startTracking());
+    // Failsafe: never leave the loading chip up if the style load stalls.
+    unawaited(
+      Future<void>.delayed(const Duration(seconds: 6)).then((_) {
+        if (mounted && !_pointsSettled) {
+          setState(() => _pointsSettled = true);
+        }
+      }),
+    );
   }
 
   @override
@@ -332,6 +341,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _toggleBasemap() async {
     _sourcesReady = false;
     _paintedOnce = false;
+    // A style reload drops the registered images, so let them be re-added.
+    _pinImageKeys.clear();
     setState(() => _satellite = !_satellite);
   }
 
@@ -495,19 +506,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     // On first open, frame the task area first so a stray far point cannot
     // zoom the map out, then the points, then the user. The recenter button
-    // jumps back to your location. The first frame is instant, so the map lands
-    // on the area at once rather than flying in from the placeholder camera.
+    // jumps back to your location. Animated so the frame reliably applies on
+    // iOS, where an instant move right after style load can be dropped.
     if (_aoiGeoJson != null) {
-      await _frameAoi(animate: false);
+      await _frameAoi();
       return;
     }
     if ((collection['features'] as List).isNotEmpty) {
-      await _centerOnData(collection, animate: false);
+      await _centerOnData(collection);
       return;
     }
     final me = _lastLocation;
     if (me != null) {
-      await _controller?.moveCamera(CameraUpdate.newLatLngZoom(me, 16.5));
+      await _controller?.animateCamera(CameraUpdate.newLatLngZoom(me, 16.5));
       return;
     }
     _pendingInitialCenter = true;
@@ -667,25 +678,36 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (controller == null) return;
     final hotKeys = await ref.read(databaseProvider).hotKeysFor(widget.groupId);
     _hotKeysById = {for (final h in hotKeys) h.id: h};
+    // Add each image once per style load. Re-adding an existing image on every
+    // refresh is wasteful and can stall the native side on iOS, which left the
+    // pins unpainted and the loading chip stuck.
     for (final hotKey in hotKeys) {
       final color = Color(hotKey.colorValue);
+      if (_pinImageKeys.add('pin_${hotKey.id}')) {
+        await controller.addImage(
+          'pin_${hotKey.id}',
+          await buildPinImage(color: color, icon: hotKeyIcon(hotKey.iconName)),
+        );
+      }
+      if (_pinImageKeys.add('cone_${hotKey.id}')) {
+        await controller.addImage(
+          'cone_${hotKey.id}',
+          await buildHeadingConeImage(color: color),
+        );
+      }
+    }
+    if (_pinImageKeys.add('pin_default')) {
       await controller.addImage(
-        'pin_${hotKey.id}',
-        await buildPinImage(color: color, icon: hotKeyIcon(hotKey.iconName)),
-      );
-      await controller.addImage(
-        'cone_${hotKey.id}',
-        await buildHeadingConeImage(color: color),
+        'pin_default',
+        await buildPinImage(color: const Color(0xFF15181B)),
       );
     }
-    await controller.addImage(
-      'pin_default',
-      await buildPinImage(color: const Color(0xFF15181B)),
-    );
-    await controller.addImage(
-      'cone_default',
-      await buildHeadingConeImage(color: const Color(0xFF15181B)),
-    );
+    if (_pinImageKeys.add('cone_default')) {
+      await controller.addImage(
+        'cone_default',
+        await buildHeadingConeImage(color: const Color(0xFF15181B)),
+      );
+    }
   }
 
   Future<void> _centerOnData(
@@ -757,19 +779,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!_sourcesReady) return;
     await _ensurePinImages();
     await _controller?.setGeoJsonSource('points', await _featureCollection());
+    if (mounted && !_pointsSettled) setState(() => _pointsSettled = true);
   }
 
   /// Re-pushes the points a few times over the first second after a style load.
   /// Each push forces a redraw, so the pins appear even on iOS, which otherwise
-  /// leaves symbols unpainted until the map is touched. Clears the spinner once
-  /// the points have had their chance to render.
+  /// leaves symbols unpainted until the map is touched.
   Future<void> _settlePins() async {
     for (final delayMs in const [200, 500, 900]) {
       await Future<void>.delayed(Duration(milliseconds: delayMs));
       if (!mounted || _controller == null || !_sourcesReady) return;
       await _refreshPins();
     }
-    if (mounted && !_pointsSettled) setState(() => _pointsSettled = true);
   }
 
   /// Shows or hides a tag's points on the map from the legend.
