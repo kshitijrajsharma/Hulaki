@@ -79,6 +79,40 @@ alter table public.public_groups
 create index if not exists public_groups_geo_idx
   on public.public_groups (center_lat, center_lng);
 
+-- Set mapper_count from the group's envelopes whenever a listing is written,
+-- so the directory preview is correct on every publish and refresh instead of
+-- trusting a client tally. sender_id is server-side plaintext, so counting
+-- needs no decryption.
+create or replace function public.set_mapper_count()
+  returns trigger
+  language plpgsql
+as $$
+begin
+  new.mapper_count := (
+    select count(distinct sender_id)
+      from public.envelopes
+     where group_id = new.group_id
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists public_groups_mapper_count on public.public_groups;
+create trigger public_groups_mapper_count
+  before insert or update on public.public_groups
+  for each row
+  execute function public.set_mapper_count();
+
+-- Backfill existing listings once, so current rows correct immediately.
+update public.public_groups pg
+   set mapper_count = counts.c
+  from (
+    select group_id, count(distinct sender_id) as c
+      from public.envelopes
+     group by group_id
+  ) counts
+ where counts.group_id = pg.group_id;
+
 alter table public.public_groups enable row level security;
 
 create policy public_groups_select on public.public_groups

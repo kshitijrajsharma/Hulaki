@@ -20,6 +20,10 @@ Future<void> showPointSheet({
   required MediaResolver mediaResolver,
 }) {
   final tagColor = tag == null ? null : Color(tag.colorValue);
+  final mediaId = message.mediaId;
+  // Resolve the photo once here, not inside the builder, so sheet rebuilds
+  // reuse the same future instead of reloading and flickering.
+  final mediaFuture = mediaId == null ? null : mediaResolver(mediaId);
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: AppColors.white,
@@ -44,9 +48,9 @@ Future<void> showPointSheet({
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            if (message.mediaId != null)
+            if (mediaFuture != null)
               FutureBuilder<Uint8List?>(
-                future: mediaResolver(message.mediaId!),
+                future: mediaFuture,
                 builder: (context, snapshot) {
                   final bytes = snapshot.data;
                   if (bytes == null) return const SizedBox.shrink();
@@ -59,6 +63,7 @@ Future<void> showPointSheet({
                         height: 150,
                         width: double.infinity,
                         fit: BoxFit.cover,
+                        gaplessPlayback: true,
                       ),
                     ),
                   );

@@ -54,6 +54,17 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
   bool _editingNote = false;
   final _noteController = TextEditingController();
   final _noteFocus = FocusNode();
+  Future<Uint8List?>? _mediaFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final mediaId = widget.message.mediaId;
+    final resolver = widget.mediaResolver;
+    // Resolve the photo once, so rebuilds (the live location stream ticks
+    // often) reuse the same future instead of reloading and flickering.
+    if (mediaId != null && resolver != null) _mediaFuture = resolver(mediaId);
+  }
 
   @override
   void dispose() {
@@ -229,7 +240,6 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
     final accuracy = message.accuracyM;
     final accuracyTier = accuracy == null ? null : gpsTierFor(accuracy);
     final located = message.lat != null && message.lng != null;
-    final resolver = widget.mediaResolver;
     final names =
         ref.watch(profileNamesProvider).asData?.value ??
         const <String, String>{};
@@ -264,9 +274,9 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
       ),
       body: ListView(
         children: [
-          if (message.mediaId != null && resolver != null)
+          if (_mediaFuture != null)
             FutureBuilder<Uint8List?>(
-              future: resolver(message.mediaId!),
+              future: _mediaFuture,
               builder: (context, snapshot) {
                 final bytes = snapshot.data;
                 return Container(
@@ -279,6 +289,7 @@ class _PointDetailScreenState extends ConsumerState<PointDetailScreen> {
                           bytes,
                           fit: BoxFit.cover,
                           width: double.infinity,
+                          gaplessPlayback: true,
                         ),
                 );
               },

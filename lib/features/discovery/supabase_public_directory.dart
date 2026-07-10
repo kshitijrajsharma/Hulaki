@@ -25,7 +25,6 @@ class SupabasePublicDirectory implements PublicDirectory {
       'enc_key': group.encKey,
       'photo': group.photo == null ? null : base64Encode(group.photo!),
       'tags': group.tags.map((t) => t.toJson()).toList(),
-      'mapper_count': group.mapperCount,
       'aoi': group.aoiGeoJson,
       'join_approval': group.joinApproval,
       'updated_at': DateTime.now().toUtc().toIso8601String(),

@@ -6,9 +6,9 @@ import 'package:fieldchat/features/discovery/public_directory.dart';
 import 'package:fieldchat/features/export/geojson.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Writes a group's public listing (name, description, centre, tags, mappers)
-/// to the directory. The mapper count is the distinct posters in the group, the
-/// same tally the chat header shows, so the preview and the group agree.
+/// Writes a group's public listing (name, description, centre, tags) to the
+/// directory. The mapper count is maintained server-side from the group's
+/// envelopes, so it is not written here.
 Future<void> publishGroupListing(
   WidgetRef ref,
   Group group,
@@ -16,8 +16,6 @@ Future<void> publishGroupListing(
 ) async {
   final db = ref.read(databaseProvider);
   final hotKeys = await db.hotKeysFor(group.id);
-  final messages = await db.messagesFor(group.id);
-  final mapperCount = messages.map((m) => m.senderId).toSet().length;
   final photo = group.photo;
   await ref
       .read(publicDirectoryProvider)
@@ -43,7 +41,6 @@ Future<void> publishGroupListing(
                 iconName: hotKey.iconName,
               ),
           ],
-          mapperCount: mapperCount,
           aoiGeoJson: group.aoiGeoJson,
         ),
       );
