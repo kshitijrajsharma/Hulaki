@@ -43,9 +43,12 @@ icons:
 run:
     flutter run
 
-# Release build, Android.
 build-android:
     flutter build apk --release
+
+# Release App Bundle. 
+bundle:
+    flutter build appbundle --release
 
 # Release build, iOS (macOS only).
 build-ios:
