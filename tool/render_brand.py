@@ -142,8 +142,12 @@ def main() -> None:
         1024,
     )
 
-    # The listing icon and the website favicon are the same image.
-    render(square_svg(WHITE, margin=17, bg=INK), root / "pages/icon-512.png", 512)
+    icon = square_svg(WHITE, margin=17, bg=INK)
+    render(icon, root / "pages/icon-512.png", 512)
+
+    favicon = root / "pages/favicon.svg"
+    favicon.write_text(icon)
+    print(f"{favicon.relative_to(Path.cwd())}  svg")
 
     feature_graphic(
         root,
