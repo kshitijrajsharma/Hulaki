@@ -1,8 +1,12 @@
-## Unreleased
+## v0.0.5 (2026-07-12)
 
 ### Feat
 
 - **release**: enhance release workflow with track input and build number
+
+### Fix
+
+- **ci**: release with description
 
 ## v0.0.4 (2026-07-12)
 
