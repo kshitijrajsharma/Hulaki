@@ -46,6 +46,8 @@
   "meRestore": "Restaurar",
   "meSupportTitle": "Apoya al desarrollador",
   "meSupportSubtitle": "Dale una estrella o patrocina el proyecto en GitHub.",
+  "meReportTitle": "Informar de un problema de seguridad",
+  "meReportSubtitle": "Escribe al desarrollador sobre contenido dañino o ilegal.",
   "meCouldNotOpenLink": "No se pudo abrir el enlace",
   "meAreaExpiresToday": "caduca hoy",
   "meAreaExpiresInDays": "{days, plural, =1{caduca en 1 día} other{caduca en {days} días}}",

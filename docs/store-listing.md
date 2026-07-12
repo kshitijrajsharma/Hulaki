@@ -56,6 +56,8 @@ provided as is, without warranty.
 
 - Privacy policy: https://kshitijrajsharma.github.io/Hulaki/privacy-policy.html
 - Terms of use: https://kshitijrajsharma.github.io/Hulaki/terms.html
+- Child safety standards:
+  https://kshitijrajsharma.github.io/Hulaki/child-safety.html
 - Support email: krschap@proton.me
 - Support site: https://github.com/kshitijrajsharma/Hulaki
 

@@ -45,11 +45,14 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     'https://github.com/sponsors/kshitijrajsharma',
   );
 
-  Future<void> _openSupport(String failureMessage) async {
-    final ok = await launchUrl(
-      _supportUri,
-      mode: LaunchMode.externalApplication,
-    );
+  /// Reaches the child safety point of contact published at
+  /// kshitijrajsharma.github.io/Hulaki/child-safety.html.
+  static final Uri _reportUri = Uri.parse(
+    'mailto:krschap@proton.me?subject=Safety%20report',
+  );
+
+  Future<void> _openLink(Uri uri, String failureMessage) async {
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && mounted) {
       ScaffoldMessenger.of(
         context,
@@ -221,7 +224,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           const SizedBox(height: AppSpacing.sm),
           _Card(
             child: InkWell(
-              onTap: () => unawaited(_openSupport(l10n.meCouldNotOpenLink)),
+              onTap: () => unawaited(
+                _openLink(_supportUri, l10n.meCouldNotOpenLink),
+              ),
               child: Row(
                 children: [
                   const Icon(
@@ -243,6 +248,47 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                         ),
                         Text(
                           l10n.meSupportSubtitle,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.open_in_new,
+                    size: 18,
+                    color: AppColors.textMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _Card(
+            child: InkWell(
+              onTap: () => unawaited(
+                _openLink(_reportUri, l10n.meCouldNotOpenLink),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.flag_outlined,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.meReportTitle,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          l10n.meReportSubtitle,
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                       ],

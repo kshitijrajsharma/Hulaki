@@ -184,6 +184,14 @@
   "@meSupportSubtitle": {
     "description": "Subtitle of the support link row"
   },
+  "meReportTitle": "Report a safety concern",
+  "@meReportTitle": {
+    "description": "Title of the row that emails the safety contact"
+  },
+  "meReportSubtitle": "Email the developer about harmful or illegal content.",
+  "@meReportSubtitle": {
+    "description": "Subtitle of the row that emails the safety contact"
+  },
   "meCouldNotOpenLink": "Could not open the link",
   "@meCouldNotOpenLink": {
     "description": "Snack bar shown when an external link fails to open"
