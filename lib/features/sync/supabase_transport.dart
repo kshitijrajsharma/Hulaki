@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:hulaki/features/identity/guard_request.dart';
+import 'package:hulaki/features/identity/identity_crypto.dart';
 import 'package:hulaki/features/sync/message_transport.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -8,10 +10,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// server assigns `seq`, Realtime fans out inserts, and `fetchSince` catches
 /// up. Only ciphertext is stored, base64-encoded.
 class SupabaseTransport implements MessageTransport {
-  SupabaseTransport(this._client);
+  SupabaseTransport(this._client, this._identity);
 
   final SupabaseClient _client;
+
+  /// This device's identity, used to sign an admin's group purge for the guard.
+  final Future<IdentityKeys> Function() _identity;
   static const _table = 'envelopes';
+  static const _function = 'group-guard';
 
   @override
   Future<int> publish(Envelope envelope) async {
@@ -22,6 +28,7 @@ class SupabaseTransport implements MessageTransport {
           'message_id': envelope.messageId,
           'sender_id': envelope.senderId,
           'ciphertext': base64Encode(envelope.ciphertext),
+          'sender_pubkey': envelope.senderPubkey,
         }, onConflict: 'group_id,message_id')
         .select('seq')
         .single();
@@ -83,7 +90,21 @@ class SupabaseTransport implements MessageTransport {
 
   @override
   Future<void> purgeGroup(String groupId) async {
-    await _client.from(_table).delete().eq('group_id', groupId);
+    final identity = await _identity();
+    final ts = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final response = await _client.functions.invoke(
+      _function,
+      body: await GuardRequest.purgeGroup(
+        identity: identity,
+        groupId: groupId,
+        ts: ts,
+      ),
+    );
+    if (response.status != 200) {
+      throw StateError(
+        'purge-group rejected (${response.status}): ${response.data}',
+      );
+    }
   }
 
   Envelope _envelopeFrom(Map<String, dynamic> row) => Envelope(

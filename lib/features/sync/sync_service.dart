@@ -507,6 +507,7 @@ class SyncService {
         messageId: payload.id,
         senderId: currentUserId,
         ciphertext: ciphertext,
+        senderPubkey: base64Encode(identity.signingPublic),
       ),
     );
     if (payload.kind != MessageKind.groupMeta) {
@@ -551,7 +552,15 @@ class SyncService {
           // skips them so a returning echo cannot clobber fresh local state.
           final apply = !mine || applyOwnMeta;
           if (isMeta && apply) {
-            await _applyGroupMeta(payload);
+            if (await _metaAuthorized(payload)) {
+              await _applyGroupMeta(payload);
+            } else {
+              developer.log(
+                'Dropping group-meta from non-admin ${payload.senderId} '
+                'in ${payload.groupId}',
+                name: 'sync',
+              );
+            }
           } else if (!isMeta && apply) {
             await _ingestFromOther(payload, envelope);
           }
@@ -757,6 +766,18 @@ class SyncService {
       subjectPublic: subjectPublic == null ? null : base64Decode(subjectPublic),
       signature: base64Decode(body['signature'] as String),
     );
+  }
+
+  /// Whether [payload]'s author may change group metadata. The earliest meta
+  /// (lowest seq) pins the admin root, so before a root exists any signed meta
+  /// is accepted to establish the creator; after that only a verified admin
+  /// may edit. Applying strictly by seq guarantees the bootstrap meta is the
+  /// creator's, not a later member's.
+  Future<bool> _metaAuthorized(MessagePayload payload) async {
+    final group = await db.groupById(payload.groupId);
+    if (group?.adminRootKey == null) return true;
+    final admins = await recomputeAdmins(db, payload.groupId);
+    return admins.contains(payload.senderId);
   }
 
   Future<void> _applyGroupMeta(MessagePayload payload) async {

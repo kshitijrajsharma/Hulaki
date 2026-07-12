@@ -6,6 +6,7 @@ import 'package:hulaki/app/env.dart';
 import 'package:hulaki/app/providers.dart';
 import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/discovery/supabase_public_directory.dart';
+import 'package:hulaki/features/identity/supabase_admin_registry.dart';
 import 'package:hulaki/features/sync/supabase_blob_store.dart';
 import 'package:hulaki/features/sync/supabase_transport.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,10 +34,21 @@ Future<void> main() async {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
         if (client != null) ...[
-          transportProvider.overrideWithValue(SupabaseTransport(client)),
+          transportProvider.overrideWith(
+            (ref) => SupabaseTransport(
+              client!,
+              () => ref.read(deviceIdentityProvider.future),
+            ),
+          ),
           blobStoreProvider.overrideWithValue(SupabaseBlobStore(client)),
-          publicDirectoryProvider.overrideWithValue(
-            SupabasePublicDirectory(client),
+          publicDirectoryProvider.overrideWith(
+            (ref) => SupabasePublicDirectory(
+              client!,
+              () => ref.read(deviceIdentityProvider.future),
+            ),
+          ),
+          adminRegistryProvider.overrideWithValue(
+            SupabaseAdminRegistry(client),
           ),
         ],
       ],

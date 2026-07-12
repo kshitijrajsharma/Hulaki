@@ -43,16 +43,25 @@ icons:
 run:
     flutter run
 
-build-android:
-    flutter build apk --release
+# Bump the version from conventional commits: updates pubspec and CHANGELOG,
+# then commits and tags. Runs the whole release chore in one step.
+bump:
+    cz bump
 
-# Release App Bundle. 
+# The Play versionCode, derived from the commit count so every upload is higher
+# than the last without editing pubspec by hand.
+build-number := `git rev-list --count HEAD`
+
+build-android:
+    flutter build apk --release --build-number={{build-number}}
+
+# Release App Bundle for Play.
 bundle:
-    flutter build appbundle --release
+    flutter build appbundle --release --build-number={{build-number}}
 
 # Release build, iOS (macOS only).
 build-ios:
-    flutter build ipa --release
+    flutter build ipa --release --build-number={{build-number}}
 
 # Report toolchain status.
 doctor:

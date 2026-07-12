@@ -2,13 +2,17 @@
 -- The relay only ever stores ciphertext; content is unreadable without the
 -- group key, which is shared out of band through the invite link.
 
+-- sender_pubkey is the author's Ed25519 signing key, stored in the clear so the
+-- group-guard Edge Function can authorise an author deleting their own message
+-- without a group key. It is public and adds no exposure beyond sender_id.
 create table if not exists public.envelopes (
-  seq         bigint generated always as identity primary key,
-  group_id    text        not null,
-  message_id  text        not null,
-  sender_id   text        not null,
-  ciphertext  text        not null,
-  created_at  timestamptz not null default now(),
+  seq           bigint generated always as identity primary key,
+  group_id      text        not null,
+  message_id    text        not null,
+  sender_id     text        not null,
+  sender_pubkey text        not null,
+  ciphertext    text        not null,
+  created_at    timestamptz not null default now(),
   unique (group_id, message_id)
 );
 
@@ -26,11 +30,9 @@ create policy envelopes_select on public.envelopes
 create policy envelopes_insert on public.envelopes
   for insert to authenticated with check (true);
 
--- Same open MVP posture: any signed-in device may delete, so an admin's
--- "Delete group" can purge the group's envelopes. Harden later alongside the
--- select and insert policies with a per-group membership check.
-create policy envelopes_delete on public.envelopes
-  for delete to authenticated using (true);
+-- No client delete policy: deletes go through the group-guard Edge Function,
+-- which verifies the caller is the message author or a group admin and deletes
+-- with the service role. A direct client delete matches no rows.
 
 -- Realtime fan-out for subscribe().
 alter publication supabase_realtime add table public.envelopes;
@@ -88,8 +90,9 @@ alter table public.public_groups enable row level security;
 create policy public_groups_select on public.public_groups
   for select to authenticated using (true);
 
-create policy public_groups_write on public.public_groups
-  for all to authenticated using (true) with check (true);
+-- No client write policy: publishing or removing a listing goes through the
+-- group-guard Edge Function, which verifies the caller is a group admin and
+-- writes with the service role. A direct client write is rejected.
 
 -- Requests to join an approval-gated public group. The requester posts their
 -- public keys; an admin approves by writing back the group key sealed to the
@@ -117,3 +120,26 @@ create policy join_requests_select on public.join_requests
 
 create policy join_requests_write on public.join_requests
   for all to authenticated using (true) with check (true);
+
+-- The server-readable admin set per group, holding only public Ed25519 keys.
+-- It mirrors the verified admin set the client already derives, so an Edge
+-- Function can authorize a delete or a listing edit without a group key and
+-- without reading any content. added_by and sig record who authorized each row
+-- (the creator self-signs the root; an existing admin signs every addition) so
+-- the guard can verify the chain. Rows hold no secrets: a public key is public.
+create table if not exists public.group_admins (
+  group_id     text not null,
+  admin_pubkey text not null,
+  added_by     text not null,
+  sig          text not null,
+  created_at   timestamptz not null default now(),
+  primary key (group_id, admin_pubkey)
+);
+
+alter table public.group_admins enable row level security;
+
+-- Readable by any signed-in device (public keys only). Writes are closed to
+-- clients: the group-guard Edge Function verifies the signature chain and
+-- writes with the service role, so a member cannot enrol itself as admin.
+create policy group_admins_select on public.group_admins
+  for select to authenticated using (true);

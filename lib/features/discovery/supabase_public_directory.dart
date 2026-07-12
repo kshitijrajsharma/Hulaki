@@ -3,20 +3,37 @@ import 'dart:math' as math;
 
 import 'package:geolocator/geolocator.dart';
 import 'package:hulaki/features/discovery/public_directory.dart';
+import 'package:hulaki/features/identity/guard_request.dart';
+import 'package:hulaki/features/identity/identity_crypto.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// The production public directory. Proximity search uses a bounding box on the
-/// indexed lat/lng columns, then refines by true distance.
+/// indexed lat/lng columns, then refines by true distance. Writes an admin
+/// makes (publishing or removing a listing) go through the group-guard Edge
+/// Function, which verifies the admin signature; reads stay direct.
 class SupabasePublicDirectory implements PublicDirectory {
-  SupabasePublicDirectory(this._client);
+  SupabasePublicDirectory(this._client, this._identity);
 
   final SupabaseClient _client;
+
+  /// This device's identity, used to sign admin listing writes for the guard.
+  final Future<IdentityKeys> Function() _identity;
   static const _table = 'public_groups';
   static const _requestsTable = 'join_requests';
+  static const _function = 'group-guard';
+
+  Future<void> _invoke(Map<String, dynamic> body) async {
+    final response = await _client.functions.invoke(_function, body: body);
+    if (response.status != 200) {
+      throw StateError(
+        '${body['action']} rejected (${response.status}): ${response.data}',
+      );
+    }
+  }
 
   @override
   Future<void> publish(PublicGroup group) async {
-    await _client.from(_table).upsert({
+    final listing = jsonEncode({
       'group_id': group.groupId,
       'name': group.name,
       'description': group.description,
@@ -29,6 +46,14 @@ class SupabasePublicDirectory implements PublicDirectory {
       'join_approval': group.joinApproval,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
+    await _invoke(
+      await GuardRequest.editListing(
+        identity: await _identity(),
+        groupId: group.groupId,
+        ts: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        listing: listing,
+      ),
+    );
   }
 
   @override
@@ -89,8 +114,13 @@ class SupabasePublicDirectory implements PublicDirectory {
 
   @override
   Future<void> remove(String groupId) async {
-    await _client.from(_table).delete().eq('group_id', groupId);
-    await _client.from(_requestsTable).delete().eq('group_id', groupId);
+    await _invoke(
+      await GuardRequest.deleteListing(
+        identity: await _identity(),
+        groupId: groupId,
+        ts: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      ),
+    );
   }
 
   @override

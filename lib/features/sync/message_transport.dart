@@ -8,6 +8,7 @@ class Envelope {
     required this.messageId,
     required this.senderId,
     required this.ciphertext,
+    this.senderPubkey,
     this.seq = 0,
   });
 
@@ -15,6 +16,11 @@ class Envelope {
   final String messageId;
   final String senderId;
   final Uint8List ciphertext;
+
+  /// The author's base64 Ed25519 signing key, set when publishing so the
+  /// server can authorise the author deleting their own message. Not populated
+  /// on inbound envelopes, which authenticate against the pinned profile key.
+  final String? senderPubkey;
   final int seq;
 
   Envelope withSeq(int value) => Envelope(
@@ -22,6 +28,7 @@ class Envelope {
     messageId: messageId,
     senderId: senderId,
     ciphertext: ciphertext,
+    senderPubkey: senderPubkey,
     seq: value,
   );
 }

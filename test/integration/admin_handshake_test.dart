@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hulaki/data/local/database.dart';
 import 'package:hulaki/features/groups/group_service.dart';
 import 'package:hulaki/features/identity/admin_chain.dart';
+import 'package:hulaki/features/identity/admin_registry.dart';
 import 'package:hulaki/features/identity/identity_crypto.dart';
 import 'package:hulaki/features/sync/blob_store.dart';
 import 'package:hulaki/features/sync/in_memory_transport.dart';
@@ -13,8 +14,12 @@ import 'package:hulaki/features/sync/sync_service.dart';
 
 /// One simulated device: its store, sync engine, group service and identity.
 class Device {
-  Device(this.userId, InMemoryTransport transport, InMemoryBlobStore blobs)
-    : db = LocalDatabase(NativeDatabase.memory()) {
+  Device(
+    this.userId,
+    InMemoryTransport transport,
+    InMemoryBlobStore blobs, {
+    AdminRegistry? adminRegistry,
+  }) : db = LocalDatabase(NativeDatabase.memory()) {
     sync = SyncService(
       db: db,
       transport: transport,
@@ -22,7 +27,12 @@ class Device {
       currentUserId: userId,
       identity: () async => identity,
     );
-    groups = GroupService(db: db, sync: sync, currentUserId: userId);
+    groups = GroupService(
+      db: db,
+      sync: sync,
+      currentUserId: userId,
+      adminRegistry: adminRegistry,
+    );
   }
 
   final String userId;

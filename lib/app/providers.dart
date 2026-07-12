@@ -13,6 +13,7 @@ import 'package:hulaki/features/capture/live_location.dart';
 import 'package:hulaki/features/discovery/public_directory.dart';
 import 'package:hulaki/features/groups/group_member_view.dart';
 import 'package:hulaki/features/groups/group_service.dart';
+import 'package:hulaki/features/identity/admin_registry.dart';
 import 'package:hulaki/features/identity/device_identity_store.dart';
 import 'package:hulaki/features/identity/identity_crypto.dart';
 import 'package:hulaki/features/sync/blob_store.dart';
@@ -37,6 +38,12 @@ final deviceIdentityProvider = FutureProvider<IdentityKeys>(
 
 final publicDirectoryProvider = Provider<PublicDirectory>(
   (ref) => InMemoryPublicDirectory(),
+);
+
+/// The server-readable admin set. In-memory today; swapped for the
+/// Supabase-backed registry once the project credentials are wired.
+final adminRegistryProvider = Provider<AdminRegistry>(
+  (ref) => InMemoryAdminRegistry(),
 );
 
 /// The running app's version and build, read from the platform at launch.
@@ -95,6 +102,7 @@ final groupServiceProvider = Provider<GroupService>(
     db: ref.watch(databaseProvider),
     sync: ref.watch(syncServiceProvider),
     currentUserId: ref.watch(currentUserIdProvider),
+    adminRegistry: ref.watch(adminRegistryProvider),
   ),
 );
 

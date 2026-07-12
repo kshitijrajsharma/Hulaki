@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:hulaki/data/local/database.dart';
 import 'package:hulaki/features/groups/invite_link.dart';
 import 'package:hulaki/features/identity/admin_chain.dart';
+import 'package:hulaki/features/identity/admin_registry.dart';
 import 'package:hulaki/features/identity/admin_roles.dart';
 import 'package:hulaki/features/identity/identity_crypto.dart';
 import 'package:hulaki/features/messaging/domain/message_payload.dart';
@@ -49,12 +50,17 @@ class GroupService {
     required this.db,
     required this.sync,
     required this.currentUserId,
+    this.adminRegistry,
     Uuid? uuid,
   }) : _uuid = uuid ?? const Uuid();
 
   final LocalDatabase db;
   final SyncService sync;
   final String currentUserId;
+
+  /// The server-readable admin set. Null in tests and keyless runs, where no
+  /// server enforces deletes, so publishing is skipped.
+  final AdminRegistry? adminRegistry;
   final Uuid _uuid;
 
   Future<Group> createGroup({
@@ -132,6 +138,15 @@ class GroupService {
     }
 
     await _addMembership(id, role: 'admin');
+    // Seed the server-readable admin set with the creator's self-signed root,
+    // so the guard can later authorise this admin's deletes and listing edits.
+    await adminRegistry?.submit(
+      await signAdminStatement(
+        signer: identity,
+        groupId: id,
+        adminPublic: identity.signingPublic,
+      ),
+    );
     // Announce this device's keys first, so its signing key is the first
     // envelope and is known before any content it authors is verified on other
     // devices. The full meta follows; it still precedes any later tag edit, so
@@ -448,6 +463,15 @@ class GroupService {
       identity: identity,
       subjectId: inviteeId,
       subjectPublic: base64Decode(inviteePublic),
+    );
+    // Enrol the invitee in the server-readable admin set, authorised by this
+    // admin, so the guard will honour their deletes once they act as admin.
+    await adminRegistry?.submit(
+      await signAdminStatement(
+        signer: identity,
+        groupId: groupId,
+        adminPublic: base64Decode(inviteePublic),
+      ),
     );
     return true;
   }
