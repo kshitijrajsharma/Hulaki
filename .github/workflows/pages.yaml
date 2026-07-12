@@ -1,9 +1,5 @@
 name: Pages
 
-# Publishes the invite landing page (pages/) to GitHub Pages. The page bounces
-# an invite link into the app via the hulaki:// scheme, with an install
-# fallback. Enable Pages once in Settings -> Pages -> Source: GitHub Actions.
-
 on:
   push:
     branches: [master]
@@ -28,10 +24,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: pages
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
