@@ -13,7 +13,7 @@ A *hulaki* stands for a mail runner: the postman who carried message letters on 
 - **Encryption**: one static AES-256-GCM key per group, shared through the
   invite link and never sent to the server. Every envelope is also signed with
   the device's Ed25519 key and verified on ingest, so authorship cannot be
-  spoofed. There is no forward secrecy and no key rotation.
+  spoofed. 
 - **Map**: MapLibre with the CARTO Positron basemap. An area can be saved for
   offline use.
 - **Track**: a 24 hour local breadcrumb, purged as it ages.
@@ -28,21 +28,6 @@ English, Spanish, French and Portuguese. A language is a file in `lib/l10n`, see
 - Android builds: the Android SDK and a JDK.
 - iOS builds and signing: macOS with Xcode.
 
-## Tasks
-
-The `justfile` is the entrypoint:
-
-```
-just setup          # install dependencies
-just lint           # format check and static analysis
-just test           # the test suite
-just translations   # check every language against the template
-just load           # load tests (slow, allocates hundreds of MB)
-just icons          # regenerate launcher icons
-just run            # run on a device or emulator
-just build-android  # release APK
-just build-ios      # release IPA (macOS only)
-```
 
 ## Configuration
 
