@@ -128,11 +128,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
   /// listing so it withholds or restores the key to match.
   Future<void> _setJoinApproval(String groupId, bool value) => _guard(() async {
     await ref.read(groupServiceProvider).setJoinApproval(groupId, value: value);
-    final group = await ref.read(databaseProvider).groupById(groupId);
-    if (group != null && group.isPublic) {
-      final center = await _groupCenter(groupId, group.aoiGeoJson);
-      if (center != null) await _publishToDirectory(group, center);
-    }
+    await refreshPublicListing(ref, groupId);
     _reload();
   });
 
@@ -214,41 +210,40 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
     );
   }
 
-  Future<void> _setPublic(
+  Future<void> _setReach(
     String groupId,
-    bool value,
+    String reach,
     AppLocalizations l10n,
   ) => _guard(() async {
+    final service = ref.read(groupServiceProvider);
     final directory = ref.read(publicDirectoryProvider);
-    if (!value) {
-      await ref.read(groupServiceProvider).setPublic(groupId, isPublic: false);
+    final db = ref.read(databaseProvider);
+    final group = await db.groupById(groupId);
+    if (group == null) return;
+    if (reach == 'private') {
+      await service.setReach(groupId, isPublic: false);
       await directory.remove(groupId);
       _reload();
       return;
     }
-    final db = ref.read(databaseProvider);
-    final group = await db.groupById(groupId);
-    final center = await _groupCenter(groupId, group?.aoiGeoJson);
-    if (center == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.groupNeedAreaBeforePublic),
-          ),
-        );
+    // Nearby needs a locatable centre; Everyone lists with no location.
+    (double, double)? center;
+    if (reach == 'local') {
+      center = await _groupCenter(groupId, group.aoiGeoJson);
+      if (center == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.groupNeedAreaBeforePublic)),
+          );
+        }
+        return;
       }
-      return;
     }
-    await ref.read(groupServiceProvider).setPublic(groupId, isPublic: true);
-    await _publishToDirectory(group!, center);
+    await service.setReach(groupId, isPublic: true, scope: reach);
+    final updated = await db.groupById(groupId);
+    if (updated != null) await publishGroupListing(ref, updated, center);
     _reload();
   });
-
-  /// Writes the group's public listing to the directory. Called when going
-  /// public and again when the description changes while public, so the nearby
-  /// list stays current.
-  Future<void> _publishToDirectory(Group group, (double, double) center) =>
-      publishGroupListing(ref, group, center);
 
   /// The group's map centre: the area's midpoint, else the average of its
   /// points. Null when the group has neither, so it cannot be located.
@@ -290,11 +285,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
       if (description != group.description) {
         await service.setDescription(group.id, description);
       }
-      final updated = await ref.read(databaseProvider).groupById(group.id);
-      if (updated != null && updated.isPublic) {
-        final center = await _groupCenter(group.id, updated.aoiGeoJson);
-        if (center != null) await _publishToDirectory(updated, center);
-      }
+      await refreshPublicListing(ref, group.id);
       _reload();
     });
   }
@@ -308,11 +299,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
     if (geoJson == null) return;
     await _guard(() async {
       await ref.read(groupServiceProvider).setMappingArea(groupId, geoJson);
-      final group = await ref.read(databaseProvider).groupById(groupId);
-      if (group != null && group.isPublic) {
-        final center = await _groupCenter(groupId, group.aoiGeoJson);
-        if (center != null) await _publishToDirectory(group, center);
-      }
+      await refreshPublicListing(ref, groupId);
       _reload();
     });
   }
@@ -512,8 +499,8 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _AdminCard(
-                  isPublic: group.isPublic,
-                  onTogglePublic: (value) => _setPublic(group.id, value, l10n),
+                  reach: group.isPublic ? group.scope : 'private',
+                  onSetReach: (reach) => _setReach(group.id, reach, l10n),
                   onArchive: () => _archive(group.id),
                   onDelete: () => _delete(group.id, group.name, l10n),
                 ),
@@ -896,14 +883,15 @@ class _ModerationCard extends StatelessWidget {
 
 class _AdminCard extends StatelessWidget {
   const _AdminCard({
-    required this.isPublic,
-    required this.onTogglePublic,
+    required this.reach,
+    required this.onSetReach,
     required this.onArchive,
     required this.onDelete,
   });
 
-  final bool isPublic;
-  final ValueChanged<bool> onTogglePublic;
+  /// 'private', 'local' or 'global'.
+  final String reach;
+  final ValueChanged<String> onSetReach;
   final VoidCallback onArchive;
   final VoidCallback onDelete;
 
@@ -920,12 +908,49 @@ class _AdminCard extends StatelessWidget {
         color: AppColors.white,
         child: Column(
           children: [
-            SwitchListTile(
-              secondary: const Icon(Icons.public, color: AppColors.ink),
-              title: Text(l10n.groupPublicGroup),
-              subtitle: Text(l10n.groupPublicGroupDetail),
-              value: isPublic,
-              onChanged: onTogglePublic,
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.public, color: AppColors.ink),
+                      const SizedBox(width: AppSpacing.md),
+                      Text(
+                        l10n.groupReach,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    l10n.groupReachDetail,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(
+                        value: 'private',
+                        label: Text(l10n.groupReachPrivate),
+                      ),
+                      ButtonSegment(
+                        value: 'local',
+                        label: Text(l10n.groupReachNearby),
+                      ),
+                      ButtonSegment(
+                        value: 'global',
+                        label: Text(l10n.groupReachEveryone),
+                      ),
+                    ],
+                    selected: {reach},
+                    onSelectionChanged: (selection) =>
+                        onSetReach(selection.first),
+                  ),
+                ],
+              ),
             ),
             const Divider(height: 1),
             ListTile(

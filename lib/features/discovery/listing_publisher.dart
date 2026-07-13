@@ -12,7 +12,7 @@ import 'package:hulaki/features/export/geojson.dart';
 Future<void> publishGroupListing(
   WidgetRef ref,
   Group group,
-  (double, double) center,
+  (double, double)? center,
 ) async {
   final db = ref.read(databaseProvider);
   final hotKeys = await db.hotKeysFor(group.id);
@@ -23,9 +23,10 @@ Future<void> publishGroupListing(
         PublicGroup(
           groupId: group.id,
           name: group.name,
+          scope: group.scope,
           description: group.description,
-          centerLat: center.$1,
-          centerLng: center.$2,
+          centerLat: center?.$1,
+          centerLng: center?.$2,
           // Approval-gated groups withhold the key so joining requires an admin
           // to seal it back to the approved requester.
           encKey: group.joinApproval ? '' : group.encKey,
@@ -47,8 +48,9 @@ Future<void> publishGroupListing(
 }
 
 /// Republishes the listing for a public group when the caller is an admin, so
-/// the nearby preview stays in step with the group's name, tags, and area. A
-/// no-op for private groups, non-admins, or groups with no locatable centre.
+/// the directory stays in step with the group's name, tags, and area. A no-op
+/// for private groups and non-admins. A global group needs no location; a local
+/// group is skipped until it has a locatable centre.
 Future<void> refreshPublicListing(WidgetRef ref, String groupId) async {
   final db = ref.read(databaseProvider);
   final group = await db.groupById(groupId);
@@ -56,6 +58,10 @@ Future<void> refreshPublicListing(WidgetRef ref, String groupId) async {
   final selfId = ref.read(currentUserIdProvider);
   final members = await db.watchMembersFor(groupId).first;
   if (!members.any((m) => m.profileId == selfId && m.isAdmin)) return;
+  if (group.scope == 'global') {
+    await publishGroupListing(ref, group, null);
+    return;
+  }
   final center = await _listingCenter(db, groupId, group.aoiGeoJson);
   if (center == null) return;
   await publishGroupListing(ref, group, center);

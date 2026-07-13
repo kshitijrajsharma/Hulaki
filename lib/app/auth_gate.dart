@@ -7,6 +7,7 @@ import 'package:hulaki/app/deep_link_watcher.dart';
 import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/auth/application/auth_state.dart';
 import 'package:hulaki/features/auth/presentation/username_screen.dart';
+import 'package:hulaki/features/onboarding/onboarding_gate.dart';
 import 'package:hulaki/features/onboarding/splash_screen.dart';
 
 /// Routes the top of the tree on auth state: splash while restoring,
@@ -22,7 +23,9 @@ class AuthGate extends ConsumerWidget {
       AuthSignedOut() => const UsernameScreen(),
       AuthSignedIn() => const ConnectivityWatcher(
         child: BackgroundServiceWatcher(
-          child: DeepLinkWatcher(child: AppShell()),
+          child: DeepLinkWatcher(
+            child: OnboardingGate(child: AppShell()),
+          ),
         ),
       ),
     };

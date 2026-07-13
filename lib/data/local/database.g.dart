@@ -529,6 +529,31 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
+  @override
+  late final GeneratedColumn<String> scope = GeneratedColumn<String>(
+    'scope',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('local'),
+  );
+  static const VerificationMeta _isSampleMeta = const VerificationMeta(
+    'isSample',
+  );
+  @override
+  late final GeneratedColumn<bool> isSample = GeneratedColumn<bool>(
+    'is_sample',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_sample" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _allowMemberExportMeta = const VerificationMeta(
     'allowMemberExport',
   );
@@ -665,6 +690,8 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     isPublic,
     joinApproval,
     adminRootKey,
+    scope,
+    isSample,
     allowMemberExport,
     allowMemberPlace,
     allowOutsideArea,
@@ -757,6 +784,18 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
           data['admin_root_key']!,
           _adminRootKeyMeta,
         ),
+      );
+    }
+    if (data.containsKey('scope')) {
+      context.handle(
+        _scopeMeta,
+        scope.isAcceptableOrUnknown(data['scope']!, _scopeMeta),
+      );
+    }
+    if (data.containsKey('is_sample')) {
+      context.handle(
+        _isSampleMeta,
+        isSample.isAcceptableOrUnknown(data['is_sample']!, _isSampleMeta),
       );
     }
     if (data.containsKey('allow_member_export')) {
@@ -879,6 +918,14 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         DriftSqlType.string,
         data['${effectivePrefix}admin_root_key'],
       ),
+      scope: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scope'],
+      )!,
+      isSample: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_sample'],
+      )!,
       allowMemberExport: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}allow_member_export'],
@@ -939,11 +986,18 @@ class Group extends DataClass implements Insertable<Group> {
   final bool joinApproval;
   final String? adminRootKey;
 
+  /// Directory reach when public: 'local' lists the group by proximity to its
+  /// mapped area, 'global' lists it in the worldwide feed with no location.
+  final String scope;
+
+  /// True for the seeded tutorial sample, so the thread can offer to remove it.
+  final bool isSample;
+
   /// Moderation controls, all set by an admin and shared through group-meta.
   /// [allowMemberExport] lets non-admins export; [allowMemberPlace] lets them
   /// place points by tapping the map rather than only sending their live fix;
-  /// [allowOutsideArea] permits points beyond the mapping area; [gpsLimitM] caps
-  /// the accuracy a sent fix may carry, in metres, null meaning no cap;
+  /// [allowOutsideArea] permits points beyond the mapping area; [gpsLimitM]
+  /// caps the accuracy a sent fix may carry, in metres, null meaning no cap;
   /// [allowMemberTags] lets non-admins add, edit and remove the quick tags.
   final bool allowMemberExport;
   final bool allowMemberPlace;
@@ -969,6 +1023,8 @@ class Group extends DataClass implements Insertable<Group> {
     required this.isPublic,
     required this.joinApproval,
     this.adminRootKey,
+    required this.scope,
+    required this.isSample,
     required this.allowMemberExport,
     required this.allowMemberPlace,
     required this.allowOutsideArea,
@@ -998,6 +1054,8 @@ class Group extends DataClass implements Insertable<Group> {
     if (!nullToAbsent || adminRootKey != null) {
       map['admin_root_key'] = Variable<String>(adminRootKey);
     }
+    map['scope'] = Variable<String>(scope);
+    map['is_sample'] = Variable<bool>(isSample);
     map['allow_member_export'] = Variable<bool>(allowMemberExport);
     map['allow_member_place'] = Variable<bool>(allowMemberPlace);
     map['allow_outside_area'] = Variable<bool>(allowOutsideArea);
@@ -1038,6 +1096,8 @@ class Group extends DataClass implements Insertable<Group> {
       adminRootKey: adminRootKey == null && nullToAbsent
           ? const Value.absent()
           : Value(adminRootKey),
+      scope: Value(scope),
+      isSample: Value(isSample),
       allowMemberExport: Value(allowMemberExport),
       allowMemberPlace: Value(allowMemberPlace),
       allowOutsideArea: Value(allowOutsideArea),
@@ -1076,6 +1136,8 @@ class Group extends DataClass implements Insertable<Group> {
       isPublic: serializer.fromJson<bool>(json['isPublic']),
       joinApproval: serializer.fromJson<bool>(json['joinApproval']),
       adminRootKey: serializer.fromJson<String?>(json['adminRootKey']),
+      scope: serializer.fromJson<String>(json['scope']),
+      isSample: serializer.fromJson<bool>(json['isSample']),
       allowMemberExport: serializer.fromJson<bool>(json['allowMemberExport']),
       allowMemberPlace: serializer.fromJson<bool>(json['allowMemberPlace']),
       allowOutsideArea: serializer.fromJson<bool>(json['allowOutsideArea']),
@@ -1101,6 +1163,8 @@ class Group extends DataClass implements Insertable<Group> {
       'isPublic': serializer.toJson<bool>(isPublic),
       'joinApproval': serializer.toJson<bool>(joinApproval),
       'adminRootKey': serializer.toJson<String?>(adminRootKey),
+      'scope': serializer.toJson<String>(scope),
+      'isSample': serializer.toJson<bool>(isSample),
       'allowMemberExport': serializer.toJson<bool>(allowMemberExport),
       'allowMemberPlace': serializer.toJson<bool>(allowMemberPlace),
       'allowOutsideArea': serializer.toJson<bool>(allowOutsideArea),
@@ -1124,6 +1188,8 @@ class Group extends DataClass implements Insertable<Group> {
     bool? isPublic,
     bool? joinApproval,
     Value<String?> adminRootKey = const Value.absent(),
+    String? scope,
+    bool? isSample,
     bool? allowMemberExport,
     bool? allowMemberPlace,
     bool? allowOutsideArea,
@@ -1144,6 +1210,8 @@ class Group extends DataClass implements Insertable<Group> {
     isPublic: isPublic ?? this.isPublic,
     joinApproval: joinApproval ?? this.joinApproval,
     adminRootKey: adminRootKey.present ? adminRootKey.value : this.adminRootKey,
+    scope: scope ?? this.scope,
+    isSample: isSample ?? this.isSample,
     allowMemberExport: allowMemberExport ?? this.allowMemberExport,
     allowMemberPlace: allowMemberPlace ?? this.allowMemberPlace,
     allowOutsideArea: allowOutsideArea ?? this.allowOutsideArea,
@@ -1174,6 +1242,8 @@ class Group extends DataClass implements Insertable<Group> {
       adminRootKey: data.adminRootKey.present
           ? data.adminRootKey.value
           : this.adminRootKey,
+      scope: data.scope.present ? data.scope.value : this.scope,
+      isSample: data.isSample.present ? data.isSample.value : this.isSample,
       allowMemberExport: data.allowMemberExport.present
           ? data.allowMemberExport.value
           : this.allowMemberExport,
@@ -1211,6 +1281,8 @@ class Group extends DataClass implements Insertable<Group> {
           ..write('isPublic: $isPublic, ')
           ..write('joinApproval: $joinApproval, ')
           ..write('adminRootKey: $adminRootKey, ')
+          ..write('scope: $scope, ')
+          ..write('isSample: $isSample, ')
           ..write('allowMemberExport: $allowMemberExport, ')
           ..write('allowMemberPlace: $allowMemberPlace, ')
           ..write('allowOutsideArea: $allowOutsideArea, ')
@@ -1226,7 +1298,7 @@ class Group extends DataClass implements Insertable<Group> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     description,
@@ -1236,6 +1308,8 @@ class Group extends DataClass implements Insertable<Group> {
     isPublic,
     joinApproval,
     adminRootKey,
+    scope,
+    isSample,
     allowMemberExport,
     allowMemberPlace,
     allowOutsideArea,
@@ -1246,7 +1320,7 @@ class Group extends DataClass implements Insertable<Group> {
     photoKey,
     createdAt,
     archivedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1260,6 +1334,8 @@ class Group extends DataClass implements Insertable<Group> {
           other.isPublic == this.isPublic &&
           other.joinApproval == this.joinApproval &&
           other.adminRootKey == this.adminRootKey &&
+          other.scope == this.scope &&
+          other.isSample == this.isSample &&
           other.allowMemberExport == this.allowMemberExport &&
           other.allowMemberPlace == this.allowMemberPlace &&
           other.allowOutsideArea == this.allowOutsideArea &&
@@ -1282,6 +1358,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
   final Value<bool> isPublic;
   final Value<bool> joinApproval;
   final Value<String?> adminRootKey;
+  final Value<String> scope;
+  final Value<bool> isSample;
   final Value<bool> allowMemberExport;
   final Value<bool> allowMemberPlace;
   final Value<bool> allowOutsideArea;
@@ -1303,6 +1381,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.isPublic = const Value.absent(),
     this.joinApproval = const Value.absent(),
     this.adminRootKey = const Value.absent(),
+    this.scope = const Value.absent(),
+    this.isSample = const Value.absent(),
     this.allowMemberExport = const Value.absent(),
     this.allowMemberPlace = const Value.absent(),
     this.allowOutsideArea = const Value.absent(),
@@ -1325,6 +1405,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.isPublic = const Value.absent(),
     this.joinApproval = const Value.absent(),
     this.adminRootKey = const Value.absent(),
+    this.scope = const Value.absent(),
+    this.isSample = const Value.absent(),
     this.allowMemberExport = const Value.absent(),
     this.allowMemberPlace = const Value.absent(),
     this.allowOutsideArea = const Value.absent(),
@@ -1350,6 +1432,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Expression<bool>? isPublic,
     Expression<bool>? joinApproval,
     Expression<String>? adminRootKey,
+    Expression<String>? scope,
+    Expression<bool>? isSample,
     Expression<bool>? allowMemberExport,
     Expression<bool>? allowMemberPlace,
     Expression<bool>? allowOutsideArea,
@@ -1372,6 +1456,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       if (isPublic != null) 'is_public': isPublic,
       if (joinApproval != null) 'join_approval': joinApproval,
       if (adminRootKey != null) 'admin_root_key': adminRootKey,
+      if (scope != null) 'scope': scope,
+      if (isSample != null) 'is_sample': isSample,
       if (allowMemberExport != null) 'allow_member_export': allowMemberExport,
       if (allowMemberPlace != null) 'allow_member_place': allowMemberPlace,
       if (allowOutsideArea != null) 'allow_outside_area': allowOutsideArea,
@@ -1396,6 +1482,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Value<bool>? isPublic,
     Value<bool>? joinApproval,
     Value<String?>? adminRootKey,
+    Value<String>? scope,
+    Value<bool>? isSample,
     Value<bool>? allowMemberExport,
     Value<bool>? allowMemberPlace,
     Value<bool>? allowOutsideArea,
@@ -1418,6 +1506,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       isPublic: isPublic ?? this.isPublic,
       joinApproval: joinApproval ?? this.joinApproval,
       adminRootKey: adminRootKey ?? this.adminRootKey,
+      scope: scope ?? this.scope,
+      isSample: isSample ?? this.isSample,
       allowMemberExport: allowMemberExport ?? this.allowMemberExport,
       allowMemberPlace: allowMemberPlace ?? this.allowMemberPlace,
       allowOutsideArea: allowOutsideArea ?? this.allowOutsideArea,
@@ -1461,6 +1551,12 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     }
     if (adminRootKey.present) {
       map['admin_root_key'] = Variable<String>(adminRootKey.value);
+    }
+    if (scope.present) {
+      map['scope'] = Variable<String>(scope.value);
+    }
+    if (isSample.present) {
+      map['is_sample'] = Variable<bool>(isSample.value);
     }
     if (allowMemberExport.present) {
       map['allow_member_export'] = Variable<bool>(allowMemberExport.value);
@@ -1510,6 +1606,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
           ..write('isPublic: $isPublic, ')
           ..write('joinApproval: $joinApproval, ')
           ..write('adminRootKey: $adminRootKey, ')
+          ..write('scope: $scope, ')
+          ..write('isSample: $isSample, ')
           ..write('allowMemberExport: $allowMemberExport, ')
           ..write('allowMemberPlace: $allowMemberPlace, ')
           ..write('allowOutsideArea: $allowOutsideArea, ')
@@ -5668,6 +5766,8 @@ typedef $$GroupsTableCreateCompanionBuilder =
       Value<bool> isPublic,
       Value<bool> joinApproval,
       Value<String?> adminRootKey,
+      Value<String> scope,
+      Value<bool> isSample,
       Value<bool> allowMemberExport,
       Value<bool> allowMemberPlace,
       Value<bool> allowOutsideArea,
@@ -5691,6 +5791,8 @@ typedef $$GroupsTableUpdateCompanionBuilder =
       Value<bool> isPublic,
       Value<bool> joinApproval,
       Value<String?> adminRootKey,
+      Value<String> scope,
+      Value<bool> isSample,
       Value<bool> allowMemberExport,
       Value<bool> allowMemberPlace,
       Value<bool> allowOutsideArea,
@@ -5816,6 +5918,16 @@ class $$GroupsTableFilterComposer
 
   ColumnFilters<String> get adminRootKey => $composableBuilder(
     column: $table.adminRootKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSample => $composableBuilder(
+    column: $table.isSample,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5999,6 +6111,16 @@ class $$GroupsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get scope => $composableBuilder(
+    column: $table.scope,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSample => $composableBuilder(
+    column: $table.isSample,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get allowMemberExport => $composableBuilder(
     column: $table.allowMemberExport,
     builder: (column) => ColumnOrderings(column),
@@ -6093,6 +6215,12 @@ class $$GroupsTableAnnotationComposer
     column: $table.adminRootKey,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get scope =>
+      $composableBuilder(column: $table.scope, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSample =>
+      $composableBuilder(column: $table.isSample, builder: (column) => column);
 
   GeneratedColumn<bool> get allowMemberExport => $composableBuilder(
     column: $table.allowMemberExport,
@@ -6253,6 +6381,8 @@ class $$GroupsTableTableManager
                 Value<bool> isPublic = const Value.absent(),
                 Value<bool> joinApproval = const Value.absent(),
                 Value<String?> adminRootKey = const Value.absent(),
+                Value<String> scope = const Value.absent(),
+                Value<bool> isSample = const Value.absent(),
                 Value<bool> allowMemberExport = const Value.absent(),
                 Value<bool> allowMemberPlace = const Value.absent(),
                 Value<bool> allowOutsideArea = const Value.absent(),
@@ -6274,6 +6404,8 @@ class $$GroupsTableTableManager
                 isPublic: isPublic,
                 joinApproval: joinApproval,
                 adminRootKey: adminRootKey,
+                scope: scope,
+                isSample: isSample,
                 allowMemberExport: allowMemberExport,
                 allowMemberPlace: allowMemberPlace,
                 allowOutsideArea: allowOutsideArea,
@@ -6297,6 +6429,8 @@ class $$GroupsTableTableManager
                 Value<bool> isPublic = const Value.absent(),
                 Value<bool> joinApproval = const Value.absent(),
                 Value<String?> adminRootKey = const Value.absent(),
+                Value<String> scope = const Value.absent(),
+                Value<bool> isSample = const Value.absent(),
                 Value<bool> allowMemberExport = const Value.absent(),
                 Value<bool> allowMemberPlace = const Value.absent(),
                 Value<bool> allowOutsideArea = const Value.absent(),
@@ -6318,6 +6452,8 @@ class $$GroupsTableTableManager
                 isPublic: isPublic,
                 joinApproval: joinApproval,
                 adminRootKey: adminRootKey,
+                scope: scope,
+                isSample: isSample,
                 allowMemberExport: allowMemberExport,
                 allowMemberPlace: allowMemberPlace,
                 allowOutsideArea: allowOutsideArea,

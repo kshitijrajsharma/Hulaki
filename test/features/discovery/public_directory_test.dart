@@ -14,6 +14,31 @@ void main() {
     encKey: 'k',
   );
 
+  PublicGroup global(String id) =>
+      PublicGroup(groupId: id, name: id, scope: 'global', encKey: 'k');
+
+  test('nearby excludes global groups; the feed returns only them', () async {
+    final dir = InMemoryPublicDirectory();
+    await dir.publish(at('local', 27.70, 85.30));
+    await dir.publish(global('worldwide'));
+
+    final near = await dir.nearby(lat: 27.70, lng: 85.30);
+    expect(near.map((g) => g.groupId), ['local']);
+
+    final feed = await dir.globalFeed();
+    expect(feed.map((g) => g.groupId), ['worldwide']);
+  });
+
+  test('globalFeed paginates', () async {
+    final dir = InMemoryPublicDirectory();
+    for (var i = 0; i < 5; i++) {
+      await dir.publish(global('g$i'));
+    }
+    expect((await dir.globalFeed(limit: 2)).length, 2);
+    expect((await dir.globalFeed(limit: 2, offset: 4)).length, 1);
+    expect(await dir.globalFeed(limit: 2, offset: 10), isEmpty);
+  });
+
   test('nearby returns groups inside the radius, nearest first', () async {
     final dir = InMemoryPublicDirectory();
     await dir.publish(at('here', 27.7000, 85.3000));

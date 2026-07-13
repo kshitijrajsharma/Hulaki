@@ -33,6 +33,13 @@ class Groups extends Table {
   BoolColumn get joinApproval => boolean().withDefault(const Constant(false))();
   TextColumn get adminRootKey => text().nullable()();
 
+  /// Directory reach when public: 'local' lists the group by proximity to its
+  /// mapped area, 'global' lists it in the worldwide feed with no location.
+  TextColumn get scope => text().withDefault(const Constant('local'))();
+
+  /// True for the seeded tutorial sample, so the thread can offer to remove it.
+  BoolColumn get isSample => boolean().withDefault(const Constant(false))();
+
   /// Moderation controls, all set by an admin and shared through group-meta.
   /// [allowMemberExport] lets non-admins export; [allowMemberPlace] lets them
   /// place points by tapping the map rather than only sending their live fix;
@@ -206,7 +213,7 @@ class LocalDatabase extends _$LocalDatabase {
     : super(executor ?? driftDatabase(name: 'hulaki'));
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -254,6 +261,12 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 12) {
         await m.addColumn(groups, groups.allowMemberTags);
+      }
+      if (from < 13) {
+        await m.addColumn(groups, groups.scope);
+      }
+      if (from < 14) {
+        await m.addColumn(groups, groups.isSample);
       }
     },
   );

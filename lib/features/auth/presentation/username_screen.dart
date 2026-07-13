@@ -7,6 +7,7 @@ import 'package:hulaki/design/widgets/primary_button.dart';
 import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/auth/data/auth_repository.dart';
 import 'package:hulaki/features/auth/domain/username.dart';
+import 'package:hulaki/features/settings/language_picker.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
 
 /// The whole sign-in: pick a handle and start. It is the name teammates see
@@ -63,7 +64,12 @@ class _UsernameScreenState extends ConsumerState<UsernameScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 64),
+              const SizedBox(height: AppSpacing.md),
+              const Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: LanguageChip(),
+              ),
+              const SizedBox(height: AppSpacing.xl),
               Text(
                 l10n.authWelcomeTitle,
                 style: Theme.of(context).textTheme.titleLarge,

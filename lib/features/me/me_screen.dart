@@ -11,6 +11,7 @@ import 'package:hulaki/features/auth/application/auth_state.dart';
 import 'package:hulaki/features/map/offline_areas.dart';
 import 'package:hulaki/features/map/offline_downloads.dart';
 import 'package:hulaki/features/settings/background_run_provider.dart';
+import 'package:hulaki/features/settings/language_picker.dart';
 import 'package:hulaki/features/settings/locale_provider.dart';
 import 'package:hulaki/features/settings/privacy_provider.dart';
 import 'package:hulaki/features/settings/units.dart';
@@ -666,77 +667,7 @@ class _LanguageTile extends ConsumerWidget {
         style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
       ),
       trailing: const Icon(Icons.chevron_right, color: AppColors.textFaint),
-      onTap: () => unawaited(_pickLanguage(context, ref)),
+      onTap: () => unawaited(showLanguagePicker(context)),
     );
-  }
-
-  Future<void> _pickLanguage(BuildContext context, WidgetRef ref) async {
-    final names = await _languageNames();
-    if (!context.mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => _LanguageSheet(names: names),
-    );
-  }
-
-  /// Each language names itself, so the list reads in the reader's own script.
-  static Future<Map<Locale, String>> _languageNames() async {
-    final names = <Locale, String>{};
-    for (final locale in AppLocalizations.supportedLocales) {
-      names[locale] = (await AppLocalizations.delegate.load(
-        locale,
-      )).languageName;
-    }
-    return names;
-  }
-}
-
-class _LanguageSheet extends ConsumerWidget {
-  const _LanguageSheet({required this.names});
-
-  final Map<Locale, String> names;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final selected = ref.watch(localeProvider);
-    return SafeArea(
-      child: RadioGroup<Locale?>(
-        groupValue: selected,
-        onChanged: (value) => _choose(context, ref, value),
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.sm,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              child: Text(
-                l10n.meLanguage,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            RadioListTile<Locale?>(
-              value: null,
-              title: Text(l10n.meLanguageSystem),
-            ),
-            for (final entry in names.entries)
-              RadioListTile<Locale?>(
-                value: entry.key,
-                title: Text(entry.value),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _choose(BuildContext context, WidgetRef ref, Locale? locale) {
-    unawaited(ref.read(localeProvider.notifier).set(locale));
-    Navigator.of(context).pop();
   }
 }

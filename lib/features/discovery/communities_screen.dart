@@ -26,9 +26,11 @@ class CommunitiesScreen extends ConsumerStatefulWidget {
 class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
   final _searchController = TextEditingController();
   Future<List<PublicGroup>>? _future;
+  Future<List<PublicGroup>>? _globalFuture;
   Future<List<PublicGroup>>? _searchFuture;
   Timer? _debounce;
   String _query = '';
+  String _tab = 'nearby';
 
   @override
   void dispose() {
@@ -41,6 +43,10 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
     _future = ref
         .read(publicDirectoryProvider)
         .nearby(lat: lat, lng: lng, radiusKm: 25);
+  }
+
+  void _loadGlobal() {
+    _globalFuture = ref.read(publicDirectoryProvider).globalFeed();
   }
 
   /// Debounces typing, then searches the directory by name. A blank query
@@ -90,12 +96,67 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
               onChanged: _onQueryChanged,
             ),
           ),
+          if (_query.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.xs,
+                AppSpacing.md,
+                AppSpacing.sm,
+              ),
+              child: SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                    value: 'nearby',
+                    label: Text(l10n.discoverNearby),
+                  ),
+                  ButtonSegment(
+                    value: 'global',
+                    label: Text(l10n.discoverGlobal),
+                  ),
+                ],
+                selected: {_tab},
+                onSelectionChanged: (selection) {
+                  setState(() {
+                    _tab = selection.first;
+                    if (_tab == 'global' && _globalFuture == null) {
+                      _loadGlobal();
+                    }
+                  });
+                },
+              ),
+            ),
           Expanded(
-            child: _query.isEmpty
+            child: _query.isNotEmpty
+                ? _searchSection(l10n, units)
+                : _tab == 'nearby'
                 ? _nearbySection(l10n, live, units)
-                : _searchSection(l10n, units),
+                : _globalSection(l10n, units),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _globalSection(AppLocalizations l10n, UnitSystem units) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        setState(_loadGlobal);
+        await _globalFuture;
+      },
+      child: FutureBuilder<List<PublicGroup>>(
+        future: _globalFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _Centered(l10n.discoverLoadingGlobal, spinner: true);
+          }
+          final groups = snapshot.data ?? const <PublicGroup>[];
+          if (groups.isEmpty) {
+            return _Centered(l10n.discoverNoGlobalGroups);
+          }
+          return _GroupList(groups: groups, units: units);
+        },
       ),
     );
   }

@@ -227,6 +227,14 @@ async function editListing(body: Record<string, unknown>): Promise<Response> {
   if (row.group_id !== groupId) {
     return json(400, { error: "listing group_id mismatch" });
   }
+  // A global listing must carry no location. Enforce it here so the guarantee
+  // holds even against a client that sends one; a local listing needs a centre.
+  if (row.scope === "global") {
+    row.center_lat = null;
+    row.center_lng = null;
+  } else if (row.center_lat == null || row.center_lng == null) {
+    return json(400, { error: "local listing needs a centre" });
+  }
   const { error } = await admin.from("public_groups").upsert(row);
   if (error) return json(500, { error: error.message });
   return json(200, { ok: true });

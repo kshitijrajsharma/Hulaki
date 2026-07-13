@@ -18,8 +18,12 @@ class GroupPlaceLine extends StatelessWidget {
     final distance = group.distanceM == null
         ? null
         : '${formatDistance(group.distanceM!, units)} away';
+    final centerLat = group.centerLat;
+    final centerLng = group.centerLng;
     return FutureBuilder<String?>(
-      future: ReverseGeocoder.placeName(group.centerLat, group.centerLng),
+      future: centerLat == null || centerLng == null
+          ? Future<String?>.value()
+          : ReverseGeocoder.placeName(centerLat, centerLng),
       builder: (context, snapshot) {
         final place = snapshot.data;
         final text = [?place, ?distance].join(' · ');

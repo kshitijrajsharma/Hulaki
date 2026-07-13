@@ -105,6 +105,9 @@ class GroupService {
             encKey: key,
             aoiGeoJson: Value(aoiGeoJson),
             isPublic: Value(isPublic),
+            // Approval-gated by default, so a public group is discoverable but
+            // its key is withheld until an admin approves each joiner.
+            joinApproval: const Value(true),
             adminRootKey: Value(rootKey),
             photo: Value(photo),
             photoBlobId: Value(photoBlobId),
@@ -257,6 +260,7 @@ class GroupService {
         'aoiGeoJson': group.aoiGeoJson,
         'isPublic': group.isPublic,
         'joinApproval': group.joinApproval,
+        'scope': group.scope,
         'allowMemberExport': group.allowMemberExport,
         'allowMemberPlace': group.allowMemberPlace,
         'allowOutsideArea': group.allowOutsideArea,
@@ -342,10 +346,16 @@ class GroupService {
     await _publishFullMeta(groupId);
   }
 
-  /// Marks the group public (discoverable) or private, and republishes.
-  Future<void> setPublic(String groupId, {required bool isPublic}) async {
+  /// Sets the group's directory reach and republishes. Private clears the
+  /// public flag; 'local' lists it by proximity, 'global' in the worldwide
+  /// feed.
+  Future<void> setReach(
+    String groupId, {
+    required bool isPublic,
+    String scope = 'local',
+  }) async {
     await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
-      GroupsCompanion(isPublic: Value(isPublic)),
+      GroupsCompanion(isPublic: Value(isPublic), scope: Value(scope)),
     );
     await _publishFullMeta(groupId);
   }

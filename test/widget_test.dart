@@ -25,7 +25,9 @@ Future<LocalDatabase> _pumpApp(
 }) async {
   final db = LocalDatabase(NativeDatabase.memory());
   addTearDown(db.close);
-  SharedPreferences.setMockInitialValues(prefs);
+  // Established-user tests skip the one-time intro; the tour never runs without
+  // the tutorial-set pending flag.
+  SharedPreferences.setMockInitialValues({'intro.seen': true, ...prefs});
   final preferences = await SharedPreferences.getInstance();
   await tester.pumpWidget(
     ProviderScope(
@@ -74,6 +76,20 @@ void main() {
     expect(find.byType(ChatsHomeScreen), findsOneWidget);
     expect(find.text('Hulaki'), findsOneWidget);
     expect(find.text('No groups yet'), findsOneWidget);
+    await _dispose(tester);
+  });
+
+  testWidgets('a first-time user sees the intro, then the shell', (
+    tester,
+  ) async {
+    await _pumpApp(tester, prefs: {..._session, 'intro.seen': false});
+    expect(find.text('How Hulaki works'), findsOneWidget);
+    expect(find.byType(ChatsHomeScreen), findsNothing);
+
+    await tester.tap(find.text('Skip'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChatsHomeScreen), findsOneWidget);
     await _dispose(tester);
   });
 

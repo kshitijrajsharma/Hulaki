@@ -795,6 +795,7 @@ class SyncService {
             aoiGeoJson: Value(meta['aoiGeoJson'] as String?),
             isPublic: Value(meta['isPublic'] as bool? ?? false),
             joinApproval: Value(meta['joinApproval'] as bool? ?? false),
+            scope: Value(meta['scope'] as String? ?? 'local'),
             allowMemberExport: Value(
               meta['allowMemberExport'] as bool? ?? false,
             ),
@@ -819,6 +820,7 @@ class SyncService {
               aoiGeoJson: Value(meta['aoiGeoJson'] as String?),
               isPublic: Value(meta['isPublic'] as bool? ?? false),
               joinApproval: Value(meta['joinApproval'] as bool? ?? false),
+              scope: Value(meta['scope'] as String? ?? 'local'),
               allowMemberExport: Value(
                 meta['allowMemberExport'] as bool? ?? false,
               ),

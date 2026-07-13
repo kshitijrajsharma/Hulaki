@@ -40,6 +40,90 @@
   "@authWelcomeSubtitle": {
     "description": "Subtitle explaining what the username is used for"
   },
+  "introTitle": "How Hulaki works",
+  "@introTitle": {
+    "description": "Title of the one-time how-it-works intro"
+  },
+  "introSubtitle": "Map the field with your team.",
+  "@introSubtitle": {
+    "description": "Subtitle of the intro screen"
+  },
+  "introStep1Title": "Start or join a group",
+  "@introStep1Title": {
+    "description": "Intro step 1 title"
+  },
+  "introStep1Body": "Create a mapping group, or join one with an invite link.",
+  "@introStep1Body": {
+    "description": "Intro step 1 body"
+  },
+  "introStep2Title": "Tap a tag, then Send",
+  "@introStep2Title": {
+    "description": "Intro step 2 title"
+  },
+  "introStep2Body": "Drop a point where you are standing, and add a photo or note.",
+  "@introStep2Body": {
+    "description": "Intro step 2 body"
+  },
+  "introStep3Title": "See it on the map",
+  "@introStep3Title": {
+    "description": "Intro step 3 title"
+  },
+  "introStep3Body": "Everyone's points appear on one map, online or off, end to end encrypted.",
+  "@introStep3Body": {
+    "description": "Intro step 3 body"
+  },
+  "introStep4Title": "Find communities",
+  "@introStep4Title": {
+    "description": "Intro step 4 title"
+  },
+  "introStep4Body": "Discover public groups near you or around the world, and ask to join.",
+  "@introStep4Body": {
+    "description": "Intro step 4 body"
+  },
+  "introFollowTutorial": "Follow tutorial",
+  "@introFollowTutorial": {
+    "description": "Intro button that loads a sample group"
+  },
+  "introSkip": "Skip",
+  "@introSkip": {
+    "description": "Intro button that enters the app with no sample"
+  },
+  "demoGroupName": "Sample: neighbourhood survey",
+  "@demoGroupName": {
+    "description": "Name of the seeded tutorial group"
+  },
+  "demoPointCrossing": "Zebra crossing by school",
+  "@demoPointCrossing": {
+    "description": "Sample point note, crossing"
+  },
+  "demoPointTrash": "Overflowing bin on the corner",
+  "@demoPointTrash": {
+    "description": "Sample point note, trash"
+  },
+  "demoPointStreetlight": "Streetlight out for two weeks",
+  "@demoPointStreetlight": {
+    "description": "Sample point note, streetlight"
+  },
+  "demoPointPole": "Leaning pole, looks unsafe",
+  "@demoPointPole": {
+    "description": "Sample point note, pole"
+  },
+  "demoPointDumping": "Dumping behind the market",
+  "@demoPointDumping": {
+    "description": "Sample point note, dumping"
+  },
+  "demoBannerTitle": "This is a sample",
+  "@demoBannerTitle": {
+    "description": "Title of the sample group instruction banner"
+  },
+  "demoBannerBody": "Example points from Ashi and Bishe. Tap a point to explore it, or add your own: pick a tag below and Send.",
+  "@demoBannerBody": {
+    "description": "Instructions in the sample group banner"
+  },
+  "demoBannerRemove": "Remove sample",
+  "@demoBannerRemove": {
+    "description": "Button that deletes the sample group"
+  },
   "authUsernameHint": "ward7_mapper",
   "@authUsernameHint": {
     "description": "Example username shown as the text field hint"
@@ -567,6 +651,22 @@
   "discoverNoNearbyGroups": "No public groups nearby yet. Start one and make it public to put it on the map.",
   "@discoverNoNearbyGroups": {
     "description": "Shown when no public group is mapping near the user"
+  },
+  "discoverNearby": "Nearby",
+  "@discoverNearby": {
+    "description": "Tab showing public groups near the user"
+  },
+  "discoverGlobal": "Global",
+  "@discoverGlobal": {
+    "description": "Tab showing the worldwide feed of communities"
+  },
+  "discoverLoadingGlobal": "Loading communities…",
+  "@discoverLoadingGlobal": {
+    "description": "Shown while the global feed loads"
+  },
+  "discoverNoGlobalGroups": "No global communities yet. Start one and set it to Everyone.",
+  "@discoverNoGlobalGroups": {
+    "description": "Shown when the global feed is empty"
   },
   "discoverSearching": "Searching…",
   "@discoverSearching": {
@@ -1271,13 +1371,25 @@
       }
     }
   },
-  "groupPublicGroup": "Public group",
-  "@groupPublicGroup": {
-    "description": "Switch that lists the group in the public directory"
+  "groupReach": "Discovery",
+  "@groupReach": {
+    "description": "Heading for the control that lists the group publicly"
   },
-  "groupPublicGroupDetail": "Discoverable by people nearby",
-  "@groupPublicGroupDetail": {
-    "description": "Explains the public group switch"
+  "groupReachDetail": "Private stays hidden. Nearby lists it on the map within 25 km. Everyone lists it in the worldwide feed.",
+  "@groupReachDetail": {
+    "description": "Explains the three discovery options"
+  },
+  "groupReachPrivate": "Private",
+  "@groupReachPrivate": {
+    "description": "Discovery option: not listed anywhere"
+  },
+  "groupReachNearby": "Nearby",
+  "@groupReachNearby": {
+    "description": "Discovery option: listed by proximity"
+  },
+  "groupReachEveryone": "Everyone",
+  "@groupReachEveryone": {
+    "description": "Discovery option: listed in the worldwide feed"
   },
   "groupArchiveGroup": "Archive group",
   "@groupArchiveGroup": {
@@ -1402,5 +1514,57 @@
   "groupDefaultTagPole": "Pole",
   "@groupDefaultTagPole": {
     "description": "Suggested starting quick tag: a utility pole"
+  },
+  "tourChatsTitle": "Your groups",
+  "@tourChatsTitle": {
+    "description": "Guided tour: title for the Chats tab"
+  },
+  "tourChatsBody": "Your mapping groups and their chats live here.",
+  "@tourChatsBody": {
+    "description": "Guided tour: what the Chats tab is for"
+  },
+  "tourCreateTitle": "Start or join a group",
+  "@tourCreateTitle": {
+    "description": "Guided tour: title for the create or join button"
+  },
+  "tourCreateBody": "Tap the plus button to create a new group or join one with a link.",
+  "@tourCreateBody": {
+    "description": "Guided tour: what the create or join button does"
+  },
+  "tourMapTitle": "The map",
+  "@tourMapTitle": {
+    "description": "Guided tour: title for the Map tab"
+  },
+  "tourMapBody": "Every point your group adds shows up here on the map.",
+  "@tourMapBody": {
+    "description": "Guided tour: what the Map tab is for"
+  },
+  "tourCommunitiesTitle": "Communities",
+  "@tourCommunitiesTitle": {
+    "description": "Guided tour: title for the Communities tab"
+  },
+  "tourCommunitiesBody": "Find and join public maps, nearby or anywhere in the world.",
+  "@tourCommunitiesBody": {
+    "description": "Guided tour: what the Communities tab is for"
+  },
+  "tourMeTitle": "Your profile",
+  "@tourMeTitle": {
+    "description": "Guided tour: title for the Me tab"
+  },
+  "tourMeBody": "Your profile, language and app settings live here.",
+  "@tourMeBody": {
+    "description": "Guided tour: what the Me tab is for"
+  },
+  "tourNext": "Next",
+  "@tourNext": {
+    "description": "Guided tour: advance to the next stop"
+  },
+  "tourDone": "Got it",
+  "@tourDone": {
+    "description": "Guided tour: finish on the last stop"
+  },
+  "tourSkip": "Skip",
+  "@tourSkip": {
+    "description": "Guided tour: dismiss the tour early"
   }
 }

@@ -59,12 +59,16 @@ create policy media_delete on storage.objects
 -- holds plaintext metadata plus the group key, so anyone nearby can find and
 -- join. Private groups never appear here. The geo index keeps proximity search
 -- instant.
+-- scope is 'local' (listed by proximity, has a center) or 'global' (listed in
+-- the worldwide feed, no center). center_lat/lng are null for global groups, so
+-- a global listing carries no location at all.
 create table if not exists public.public_groups (
   group_id     text primary key,
   name         text not null,
   description  text,
-  center_lat   double precision not null,
-  center_lng   double precision not null,
+  scope        text not null default 'local',
+  center_lat   double precision,
+  center_lng   double precision,
   enc_key      text not null,
   photo        text,
   tags         jsonb not null default '[]'::jsonb,
@@ -81,9 +85,18 @@ alter table public.public_groups
 alter table public.public_groups add column if not exists aoi text;
 alter table public.public_groups
   add column if not exists join_approval boolean not null default false;
+alter table public.public_groups
+  add column if not exists scope text not null default 'local';
+alter table public.public_groups alter column center_lat drop not null;
+alter table public.public_groups alter column center_lng drop not null;
 
 create index if not exists public_groups_geo_idx
   on public.public_groups (center_lat, center_lng);
+
+-- The global feed ranks by recency; activity and member count refine it in the
+-- query. Partial index keeps it to just the global rows.
+create index if not exists public_groups_global_idx
+  on public.public_groups (updated_at desc) where scope = 'global';
 
 alter table public.public_groups enable row level security;
 

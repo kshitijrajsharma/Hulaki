@@ -24,6 +24,7 @@ import 'package:hulaki/features/map/map_screen.dart';
 import 'package:hulaki/features/messaging/presentation/message_bubble.dart';
 import 'package:hulaki/features/messaging/presentation/point_detail_screen.dart';
 import 'package:hulaki/features/onboarding/coach_tip.dart';
+import 'package:hulaki/features/onboarding/demo_group.dart';
 import 'package:hulaki/features/settings/privacy_provider.dart';
 import 'package:hulaki/features/sync/presentation/pending_upload_banner.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
@@ -104,6 +105,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     } finally {
       if (mounted) setState(() => _resyncing = false);
     }
+  }
+
+  Future<void> _removeSample() async {
+    final navigator = Navigator.of(context);
+    await removeSampleGroup(ref.read(databaseProvider), widget.groupId);
+    if (mounted) navigator.pop();
   }
 
   Future<void> _attachPhoto(AppLocalizations l10n) async {
@@ -414,6 +421,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
         ref.watch(activeGroupsProvider).asData?.value ?? const <Group>[];
     final match = groups.where((g) => g.id == widget.groupId);
     final photo = match.isEmpty ? null : match.first.photo;
+    final isSample = match.isNotEmpty && match.first.isSample;
 
     return Scaffold(
       backgroundColor: AppColors.mist,
@@ -486,14 +494,18 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             child: LiveGpsStrip(),
           ),
           PendingUploadBanner(groupId: widget.groupId),
-          CoachTip(
-            tipKey: 'thread',
-            message: l10n.threadCoachTapTag,
-          ),
-          CoachTip(
-            tipKey: 'thread-sync',
-            message: l10n.threadCoachPullToRefresh,
-          ),
+          if (isSample)
+            _SampleBanner(onRemove: () => unawaited(_removeSample()))
+          else ...[
+            CoachTip(
+              tipKey: 'thread',
+              message: l10n.threadCoachTapTag,
+            ),
+            CoachTip(
+              tipKey: 'thread-sync',
+              message: l10n.threadCoachPullToRefresh,
+            ),
+          ],
           Expanded(
             child: Stack(
               children: [
@@ -1032,6 +1044,67 @@ class _Composer extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A short instructional card shown at the top of the seeded sample group: what
+/// it is, what to try, and a one-tap way to remove it once done.
+class _SampleBanner extends StatelessWidget {
+  const _SampleBanner({required this.onRemove});
+
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: AppColors.amber.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.school_outlined,
+                size: 18,
+                color: AppColors.amber,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                l10n.demoBannerTitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.ink,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.demoBannerBody,
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.35,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onRemove,
+              child: Text(l10n.demoBannerRemove),
+            ),
+          ),
+        ],
       ),
     );
   }

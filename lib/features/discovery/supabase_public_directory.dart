@@ -37,6 +37,7 @@ class SupabasePublicDirectory implements PublicDirectory {
       'group_id': group.groupId,
       'name': group.name,
       'description': group.description,
+      'scope': group.scope,
       'center_lat': group.centerLat,
       'center_lng': group.centerLng,
       'enc_key': group.encKey,
@@ -134,6 +135,7 @@ class SupabasePublicDirectory implements PublicDirectory {
     final rows = await _client
         .from(_table)
         .select()
+        .eq('scope', 'local')
         .gte('center_lat', lat - deltaLat)
         .lte('center_lat', lat + deltaLat)
         .gte('center_lng', lng - deltaLng)
@@ -155,6 +157,17 @@ class SupabasePublicDirectory implements PublicDirectory {
     }
     results.sort((a, b) => a.distanceM!.compareTo(b.distanceM!));
     return results;
+  }
+
+  @override
+  Future<List<PublicGroup>> globalFeed({int limit = 50, int offset = 0}) async {
+    final rows = await _client
+        .from(_table)
+        .select()
+        .eq('scope', 'global')
+        .order('updated_at', ascending: false)
+        .range(offset, offset + limit - 1);
+    return [for (final row in rows) _groupFromRow(row)];
   }
 
   @override
@@ -180,9 +193,10 @@ class SupabasePublicDirectory implements PublicDirectory {
     return PublicGroup(
       groupId: row['group_id'] as String,
       name: row['name'] as String,
+      scope: row['scope'] as String? ?? 'local',
       description: row['description'] as String?,
-      centerLat: (row['center_lat'] as num).toDouble(),
-      centerLng: (row['center_lng'] as num).toDouble(),
+      centerLat: (row['center_lat'] as num?)?.toDouble(),
+      centerLng: (row['center_lng'] as num?)?.toDouble(),
       encKey: row['enc_key'] as String,
       photo: photo == null ? null : base64Decode(photo),
       tags: tags == null

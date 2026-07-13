@@ -377,7 +377,10 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
     if (_showCommunities) {
       final placed = <(Offset, LatLng)>[];
       for (final group in _communities) {
-        final center = LatLng(group.centerLat, group.centerLng);
+        final lat = group.centerLat;
+        final lng = group.centerLng;
+        if (lat == null || lng == null) continue;
+        final center = LatLng(lat, lng);
         final offset = await project(center);
         placed.add((offset ?? Offset.infinite, center));
       }

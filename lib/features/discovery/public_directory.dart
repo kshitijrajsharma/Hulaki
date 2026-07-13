@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:geolocator/geolocator.dart';
@@ -35,9 +36,10 @@ class PublicGroup {
   const PublicGroup({
     required this.groupId,
     required this.name,
-    required this.centerLat,
-    required this.centerLng,
     required this.encKey,
+    this.scope = 'local',
+    this.centerLat,
+    this.centerLng,
     this.description,
     this.photo,
     this.tags = const [],
@@ -48,9 +50,15 @@ class PublicGroup {
 
   final String groupId;
   final String name;
+
+  /// 'local' (listed by proximity, has a center) or 'global' (worldwide feed,
+  /// no center).
+  final String scope;
   final String? description;
-  final double centerLat;
-  final double centerLng;
+
+  /// Null for a global group, which carries no location.
+  final double? centerLat;
+  final double? centerLng;
   final String encKey;
   final Uint8List? photo;
   final List<DirectoryTag> tags;
@@ -63,11 +71,14 @@ class PublicGroup {
   /// Distance from the searcher, filled by [PublicDirectory.nearby].
   final double? distanceM;
 
+  bool get isGlobal => scope == 'global';
+
   String get inviteUrl => InviteLink(groupId: groupId, key: encKey).url;
 
   PublicGroup withDistance(double meters) => PublicGroup(
     groupId: groupId,
     name: name,
+    scope: scope,
     centerLat: centerLat,
     centerLng: centerLng,
     encKey: encKey,
@@ -121,6 +132,9 @@ abstract interface class PublicDirectory {
     required double lng,
     double radiusKm,
   });
+
+  /// Global groups for the worldwide feed, newest first, a page at a time.
+  Future<List<PublicGroup>> globalFeed({int limit, int offset});
 
   /// Groups whose name contains [query] (case-insensitive), for finding a group
   /// by name beyond the nearby radius. Empty when [query] is blank.
@@ -209,16 +223,24 @@ class InMemoryPublicDirectory implements PublicDirectory {
     final radiusM = radiusKm * 1000;
     final withDistance = <PublicGroup>[];
     for (final group in _entries.values) {
-      final meters = Geolocator.distanceBetween(
-        lat,
-        lng,
-        group.centerLat,
-        group.centerLng,
-      );
+      final centerLat = group.centerLat;
+      final centerLng = group.centerLng;
+      if (group.isGlobal || centerLat == null || centerLng == null) continue;
+      final meters = Geolocator.distanceBetween(lat, lng, centerLat, centerLng);
       if (meters <= radiusM) withDistance.add(group.withDistance(meters));
     }
     withDistance.sort((a, b) => a.distanceM!.compareTo(b.distanceM!));
     return withDistance;
+  }
+
+  @override
+  Future<List<PublicGroup>> globalFeed({int limit = 50, int offset = 0}) async {
+    final global = [
+      for (final group in _entries.values)
+        if (group.isGlobal) group,
+    ];
+    if (offset >= global.length) return const [];
+    return global.sublist(offset, math.min(offset + limit, global.length));
   }
 
   @override
