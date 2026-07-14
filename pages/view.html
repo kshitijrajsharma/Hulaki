@@ -69,24 +69,28 @@
       border-left: 1px solid var(--mist); background: var(--paper);
     }
     @media (max-width: 820px) {
+      #map { flex: 0 0 44vh; }
       .panel { flex: 1 1 auto; border-left: none;
         border-top: 1px solid var(--mist); max-width: none; }
-      #map { flex: 0 0 44vh; }
     }
     .legend {
       position: absolute; left: 10px; bottom: 10px; z-index: 5;
       background: var(--white); border: 1px solid var(--mist);
-      border-radius: 12px; padding: 10px 12px; max-width: 240px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08); font-size: 12px;
+      border-radius: 12px; padding: 8px 10px; max-width: 60%;
+      max-height: 55%; overflow-y: auto;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08); font-size: 13px;
+      -webkit-overflow-scrolling: touch;
     }
     .legend h2 {
       font-size: 10px; letter-spacing: 0.5px; font-weight: 700;
-      color: var(--text-muted); margin: 0 0 8px;
+      color: var(--text-muted); margin: 0 0 6px;
     }
     .legend .row {
-      display: flex; align-items: center; gap: 8px; margin: 4px 0;
-      cursor: pointer; user-select: none; padding: 2px 0;
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; user-select: none; padding: 6px 4px;
+      border-radius: 8px; -webkit-tap-highlight-color: transparent;
     }
+    .legend .row:active { background: var(--field); }
     .legend .row.off { opacity: 0.4; }
     .legend .row.off .label { text-decoration: line-through; }
     .legend .label { flex: 1 1 auto; }
@@ -94,10 +98,10 @@
       font-size: 16px; color: var(--text-faint);
     }
     .swatch {
-      width: 22px; height: 22px; border-radius: 7px; flex: 0 0 auto;
-      display: flex; align-items: center; justify-content: center; color: #fff;
+      width: 22px; height: 28px; flex: 0 0 auto;
+      background-size: contain; background-repeat: no-repeat;
+      background-position: center;
     }
-    .swatch .material-symbols-rounded { font-size: 15px; color: #fff; }
     .cards { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
     .card {
       background: var(--white); border: 1px solid var(--mist);
@@ -117,12 +121,10 @@
       object-fit: cover; display: block;
     }
     .card .note { font-size: 14px; line-height: 1.4; color: var(--ink); }
-    .card .when { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
-    .card .foot {
-      display: flex; align-items: center; gap: 6px; margin-top: 9px;
-      font-size: 12px; color: var(--text-muted);
+    .meta {
+      font-size: 11px; font-style: italic; color: var(--text-faint);
+      margin-top: 8px;
     }
-    .card .foot .material-symbols-rounded { font-size: 15px; color: var(--gps); }
     .state { margin: auto; text-align: center; padding: 40px 24px; max-width: 340px; }
     .state h1 { font-size: 20px; }
     .state p { color: var(--text-secondary); font-size: 14px; }
@@ -245,8 +247,10 @@
       if(url){ el.style.backgroundImage = 'url('+url+')'; }
     }
 
-    function render(){
+    async function render(){
       var meta = DATA.meta||{}, features = (DATA.geojson&&DATA.geojson.features)||[];
+      try { await document.fonts.load('700 24px "Material Symbols Rounded"'); }
+      catch(e){ /* fall back to whatever the browser has */ }
       document.getElementById('header').hidden = false;
       document.getElementById('groupName').textContent = meta.group||'Hulaki';
       document.getElementById('groupSub').textContent =
@@ -270,10 +274,10 @@
     function buildLegend(legend){
       var el = document.getElementById('legend');
       if(!legend.length){ el.hidden = true; return; }
-      el.innerHTML = '<h2>TAGS · tap to toggle</h2>' + legend.map(function(t){
+      el.innerHTML = '<h2>TAGS</h2>' + legend.map(function(t){
         return '<div class="row" data-tag="'+esc(t.label)+'">'+
-          '<span class="swatch" style="background:'+esc(t.color||'#566069')+'">'+
-          '<span class="material-symbols-rounded">'+glyph(t.icon)+'</span></span>'+
+          '<span class="swatch" style="background-image:url('+
+          pinDataUrl(t.color||'#566069', glyph(t.icon))+')"></span>'+
           '<span class="label">'+esc(t.label)+'</span>'+
           '<span class="material-symbols-rounded eye">visibility</span></div>';
       }).join('');
@@ -303,17 +307,17 @@
         function(c){ c.classList.toggle('hidden', !!HIDDEN[c.dataset.tag]); });
     }
 
-    function detailHtml(p, compact){
+    function detailHtml(p){
       var chip = p.tag ? '<span class="chip" style="background:'+
         esc(p.color||'#566069')+'"><span class="material-symbols-rounded">'+
         glyph(p.icon)+'</span>'+esc(p.tag)+'</span>' : '';
-      var when = '<div class="when">'+esc(fmtTime(p.time))+'</div>';
       var photo = p.photo ? '<div class="photo" data-fid="'+esc(p.id)+'"></div>' : '';
       var note = p.note ? '<div class="note">'+esc(p.note)+'</div>' : '';
-      var acc = (p.accuracyM!=null) ? '<div class="foot">'+
-        '<span class="material-symbols-rounded">my_location</span>±'+
-        esc(p.accuracyM)+' m</div>' : '';
-      return chip + when + photo + note + acc;
+      var bits = [];
+      if(p.time) bits.push(esc(fmtTime(p.time)));
+      if(p.accuracyM != null) bits.push('±'+esc(p.accuracyM)+' m');
+      var meta = bits.length ? '<div class="meta">'+bits.join(' · ')+'</div>' : '';
+      return chip + photo + note + meta;
     }
 
     var observer = new IntersectionObserver(function(entries){
@@ -322,10 +326,10 @@
     }, {rootMargin: '200px'});
 
     function buildCards(features){
-      var html = features.map(function(f){
+      var html = features.map(function(f, idx){
         var p = f.properties||{};
-        return '<div class="card" data-i="'+f._i+'" data-tag="'+esc(p.tag||'')+
-          '">'+detailHtml(p,false)+'</div>';
+        return '<div class="card" data-i="'+idx+'" data-tag="'+esc(p.tag||'')+
+          '">'+detailHtml(p)+'</div>';
       }).join('');
       var host = document.getElementById('cards');
       host.innerHTML = html;
@@ -339,19 +343,41 @@
 
     // Renders one crisp pin sprite per tag (colour plus the tag's white icon) at
     // the device pixel ratio, so the map icons stay sharp like the phone.
-    function markerImage(color, glyphName, scale){
-      var base = 34, W = base*scale, H = base*scale;
-      var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    // A teardrop pin matching lib/features/map/marker_images.dart: coloured head
+    // with the white icon, white outline, tip at the bottom-centre.
+    function markerCanvas(color, glyphName, scale){
+      var S = 34*scale;
+      var cv = document.createElement('canvas'); cv.width = S; cv.height = S;
       var ctx = cv.getContext('2d');
-      var cx = W/2, cy = H/2, r = W/2 - 3*scale;
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2*Math.PI);
+      var radius = S*0.30, cx = S/2, cy = radius + S*0.09;
+      var tipy = S - S*0.05;
+      var half = Math.acos(radius/(tipy - cy));
+      var a = Math.PI/2 - half;
+      ctx.beginPath();
+      ctx.moveTo(cx, tipy);
+      ctx.lineTo(cx + Math.cos(a)*radius, cy + Math.sin(a)*radius);
+      ctx.arc(cx, cy, radius, a, a - (2*Math.PI - 2*half), true);
+      ctx.closePath();
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = S*0.04; ctx.shadowOffsetY = S*0.015;
       ctx.fillStyle = color; ctx.fill();
-      ctx.lineWidth = 2.5*scale; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = color; ctx.fill();
+      ctx.lineWidth = S*0.035; ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#ffffff'; ctx.stroke();
       ctx.fillStyle = '#ffffff';
-      ctx.font = '700 '+(18*scale)+'px "Material Symbols Rounded"';
+      ctx.font = '700 '+(radius*1.15)+'px "Material Symbols Rounded"';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(glyphName, cx, cy + scale);
-      return ctx.getImageData(0, 0, W, H);
+      ctx.fillText(glyphName, cx, cy);
+      return cv;
+    }
+    function markerImage(color, glyphName, scale){
+      var cv = markerCanvas(color, glyphName, scale);
+      return cv.getContext('2d').getImageData(0, 0, cv.width, cv.height);
+    }
+    function pinDataUrl(color, glyphName){
+      return markerCanvas(color, glyphName, 3).toDataURL();
     }
     async function addTagMarkers(){
       try { await document.fonts.load('700 24px "Material Symbols Rounded"'); }
@@ -395,7 +421,7 @@
         map.addLayer({id:'points', type:'symbol', source:'pts',
           filter:['!',['has','point_count']], layout:{
             'icon-image':['concat','m-',['coalesce',['get','tag'],'__none']],
-            'icon-size':0.82, 'icon-allow-overlap':true, 'icon-anchor':'center'}});
+            'icon-size':0.9, 'icon-allow-overlap':true, 'icon-anchor':'bottom'}});
         map.on('click','clusters', function(e){
           var f = map.queryRenderedFeatures(e.point,{layers:['clusters']})[0];
           map.getSource('pts').getClusterExpansionZoom(f.properties.cluster_id)
@@ -420,7 +446,7 @@
     function openPopup(f){
       var pop = new maplibregl.Popup({offset:14, closeButton:false, maxWidth:'260px'})
         .setLngLat(f.geometry.coordinates)
-        .setHTML('<div class="pop">'+detailHtml(f.properties,false)+'</div>')
+        .setHTML('<div class="pop">'+detailHtml(f.properties)+'</div>')
         .addTo(map);
       var ph = pop.getElement().querySelector('.photo');
       if(ph) fillPhoto(ph);
