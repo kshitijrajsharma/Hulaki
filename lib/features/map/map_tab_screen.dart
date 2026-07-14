@@ -12,6 +12,7 @@ import 'package:hulaki/data/local/database_provider.dart';
 import 'package:hulaki/design/app_colors.dart';
 import 'package:hulaki/design/app_spacing.dart';
 import 'package:hulaki/design/brand/hulaki_logo.dart';
+import 'package:hulaki/design/widgets/pill_toggle.dart';
 import 'package:hulaki/features/capture/staged_point.dart';
 import 'package:hulaki/features/discovery/group_preview_screen.dart';
 import 'package:hulaki/features/discovery/public_directory.dart';
@@ -811,70 +812,13 @@ class _MapToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Material(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(22),
+    return PillToggle(
+      left: l10n.mapToggleMyGroups,
+      right: l10n.mapToggleCommunities,
+      rightSelected: showCommunities,
+      rightEnabled: online,
       elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _Segment(
-              label: l10n.mapToggleMyGroups,
-              selected: !showCommunities,
-              enabled: true,
-              onTap: () => onChanged(false),
-            ),
-            _Segment(
-              label: l10n.mapToggleCommunities,
-              selected: showCommunities,
-              enabled: online,
-              onTap: () => onChanged(true),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Segment extends StatelessWidget {
-  const _Segment({
-    required this.label,
-    required this.selected,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = !enabled
-        ? AppColors.textFaint
-        : (selected ? AppColors.white : AppColors.ink);
-    return Material(
-      color: selected ? AppColors.ink : Colors.transparent,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ),
-      ),
+      onChanged: onChanged,
     );
   }
 }

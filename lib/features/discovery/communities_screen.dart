@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hulaki/app/providers.dart';
 import 'package:hulaki/design/app_colors.dart';
 import 'package:hulaki/design/app_spacing.dart';
+import 'package:hulaki/design/widgets/pill_toggle.dart';
 import 'package:hulaki/features/capture/live_location.dart';
 import 'package:hulaki/features/discovery/group_preview_screen.dart';
 import 'package:hulaki/features/discovery/place_line.dart';
@@ -104,27 +105,20 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                 AppSpacing.md,
                 AppSpacing.sm,
               ),
-              child: SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: [
-                  ButtonSegment(
-                    value: 'nearby',
-                    label: Text(l10n.discoverNearby),
-                  ),
-                  ButtonSegment(
-                    value: 'global',
-                    label: Text(l10n.discoverGlobal),
-                  ),
-                ],
-                selected: {_tab},
-                onSelectionChanged: (selection) {
-                  setState(() {
-                    _tab = selection.first;
-                    if (_tab == 'global' && _globalFuture == null) {
-                      _loadGlobal();
-                    }
-                  });
-                },
+              child: Center(
+                child: PillToggle(
+                  left: l10n.discoverNearby,
+                  right: l10n.discoverGlobal,
+                  rightSelected: _tab == 'global',
+                  onChanged: (global) {
+                    setState(() {
+                      _tab = global ? 'global' : 'nearby';
+                      if (_tab == 'global' && _globalFuture == null) {
+                        _loadGlobal();
+                      }
+                    });
+                  },
+                ),
               ),
             ),
           Expanded(
