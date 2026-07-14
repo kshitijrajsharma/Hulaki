@@ -14,6 +14,7 @@ import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/discovery/listing_publisher.dart';
 import 'package:hulaki/features/discovery/public_directory.dart';
 import 'package:hulaki/features/export/geojson.dart';
+import 'package:hulaki/features/export/presentation/share_web_sheet.dart';
 import 'package:hulaki/features/groups/group_member_view.dart';
 import 'package:hulaki/features/groups/group_service.dart';
 import 'package:hulaki/features/groups/presentation/area_draw_screen.dart';
@@ -466,6 +467,12 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
                   builder: (_) => ExportSheet(group: group),
+                ),
+                onShareWeb: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => ShareWebSheet(group: group),
                 ),
               ),
               if (iAmAdmin && group.isPublic && group.joinApproval) ...[
@@ -1504,6 +1511,7 @@ class _ManageCard extends StatelessWidget {
     required this.onEditHotKeys,
     required this.onMakeOffline,
     required this.onExport,
+    required this.onShareWeb,
   });
 
   final bool caching;
@@ -1515,6 +1523,7 @@ class _ManageCard extends StatelessWidget {
   final VoidCallback onEditHotKeys;
   final VoidCallback onMakeOffline;
   final VoidCallback onExport;
+  final VoidCallback onShareWeb;
 
   @override
   Widget build(BuildContext context) {
@@ -1597,6 +1606,17 @@ class _ManageCard extends StatelessWidget {
                   color: AppColors.textFaint,
                 ),
                 onTap: onExport,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.public, color: AppColors.ink),
+                title: Text(l10n.groupShareWebTitle),
+                subtitle: Text(l10n.groupShareWebDetail),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textFaint,
+                ),
+                onTap: onShareWeb,
               ),
             ],
           ],

@@ -5384,6 +5384,314 @@ class AdminEventsCompanion extends UpdateCompanion<AdminEventRow> {
   }
 }
 
+class $WebSnapshotsTable extends WebSnapshots
+    with TableInfo<$WebSnapshotsTable, WebSnapshot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WebSnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, groupId, url, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'web_snapshots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WebSnapshot> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('url')) {
+      context.handle(
+        _urlMeta,
+        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_urlMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WebSnapshot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WebSnapshot(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      url: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $WebSnapshotsTable createAlias(String alias) {
+    return $WebSnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
+  final String id;
+  final String groupId;
+  final String url;
+  final DateTime createdAt;
+  const WebSnapshot({
+    required this.id,
+    required this.groupId,
+    required this.url,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['url'] = Variable<String>(url);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  WebSnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return WebSnapshotsCompanion(
+      id: Value(id),
+      groupId: Value(groupId),
+      url: Value(url),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory WebSnapshot.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WebSnapshot(
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      url: serializer.fromJson<String>(json['url']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'url': serializer.toJson<String>(url),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  WebSnapshot copyWith({
+    String? id,
+    String? groupId,
+    String? url,
+    DateTime? createdAt,
+  }) => WebSnapshot(
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    url: url ?? this.url,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  WebSnapshot copyWithCompanion(WebSnapshotsCompanion data) {
+    return WebSnapshot(
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      url: data.url.present ? data.url.value : this.url,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WebSnapshot(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('url: $url, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, groupId, url, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WebSnapshot &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.url == this.url &&
+          other.createdAt == this.createdAt);
+}
+
+class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> url;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const WebSnapshotsCompanion({
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.url = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  WebSnapshotsCompanion.insert({
+    required String id,
+    required String groupId,
+    required String url,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       groupId = Value(groupId),
+       url = Value(url),
+       createdAt = Value(createdAt);
+  static Insertable<WebSnapshot> custom({
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? url,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (url != null) 'url': url,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  WebSnapshotsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? url,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return WebSnapshotsCompanion(
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      url: url ?? this.url,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WebSnapshotsCompanion(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('url: $url, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -5397,6 +5705,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
   late final $AdminEventsTable adminEvents = $AdminEventsTable(this);
+  late final $WebSnapshotsTable webSnapshots = $WebSnapshotsTable(this);
   late final Index hotKeysGroup = Index(
     'hot_keys_group',
     'CREATE INDEX hot_keys_group ON hot_keys (group_id)',
@@ -5424,6 +5733,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     outbox,
     syncCursors,
     adminEvents,
+    webSnapshots,
     hotKeysGroup,
     messagesGroupCreated,
     trackOwnerTime,
@@ -8950,6 +9260,187 @@ typedef $$AdminEventsTableProcessedTableManager =
       AdminEventRow,
       PrefetchHooks Function()
     >;
+typedef $$WebSnapshotsTableCreateCompanionBuilder =
+    WebSnapshotsCompanion Function({
+      required String id,
+      required String groupId,
+      required String url,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$WebSnapshotsTableUpdateCompanionBuilder =
+    WebSnapshotsCompanion Function({
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> url,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$WebSnapshotsTableFilterComposer
+    extends Composer<_$LocalDatabase, $WebSnapshotsTable> {
+  $$WebSnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$WebSnapshotsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $WebSnapshotsTable> {
+  $$WebSnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WebSnapshotsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $WebSnapshotsTable> {
+  $$WebSnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get groupId =>
+      $composableBuilder(column: $table.groupId, builder: (column) => column);
+
+  GeneratedColumn<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$WebSnapshotsTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $WebSnapshotsTable,
+          WebSnapshot,
+          $$WebSnapshotsTableFilterComposer,
+          $$WebSnapshotsTableOrderingComposer,
+          $$WebSnapshotsTableAnnotationComposer,
+          $$WebSnapshotsTableCreateCompanionBuilder,
+          $$WebSnapshotsTableUpdateCompanionBuilder,
+          (
+            WebSnapshot,
+            BaseReferences<_$LocalDatabase, $WebSnapshotsTable, WebSnapshot>,
+          ),
+          WebSnapshot,
+          PrefetchHooks Function()
+        > {
+  $$WebSnapshotsTableTableManager(_$LocalDatabase db, $WebSnapshotsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WebSnapshotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WebSnapshotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WebSnapshotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> url = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => WebSnapshotsCompanion(
+                id: id,
+                groupId: groupId,
+                url: url,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String groupId,
+                required String url,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => WebSnapshotsCompanion.insert(
+                id: id,
+                groupId: groupId,
+                url: url,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$WebSnapshotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $WebSnapshotsTable,
+      WebSnapshot,
+      $$WebSnapshotsTableFilterComposer,
+      $$WebSnapshotsTableOrderingComposer,
+      $$WebSnapshotsTableAnnotationComposer,
+      $$WebSnapshotsTableCreateCompanionBuilder,
+      $$WebSnapshotsTableUpdateCompanionBuilder,
+      (
+        WebSnapshot,
+        BaseReferences<_$LocalDatabase, $WebSnapshotsTable, WebSnapshot>,
+      ),
+      WebSnapshot,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -8974,4 +9465,6 @@ class $LocalDatabaseManager {
       $$SyncCursorsTableTableManager(_db, _db.syncCursors);
   $$AdminEventsTableTableManager get adminEvents =>
       $$AdminEventsTableTableManager(_db, _db.adminEvents);
+  $$WebSnapshotsTableTableManager get webSnapshots =>
+      $$WebSnapshotsTableTableManager(_db, _db.webSnapshots);
 }

@@ -343,5 +343,18 @@
   "tourMeBody": "Dein Profil, die Sprache und die App-Einstellungen sind hier.",
   "tourNext": "Weiter",
   "tourDone": "Verstanden",
-  "tourSkip": "Überspringen"
+  "tourSkip": "Überspringen",
+  "groupShareWebTitle": "Im Web teilen",
+  "groupShareWebDetail": "Ein schreibgeschützter Link zum Ansehen und Herunterladen",
+  "shareWebTitle": "Im Web teilen",
+  "shareWebBody": "Veröffentliche eine schreibgeschützte Webseite mit den Punkten und Fotos dieser Gruppe. Jeder mit dem Link kann die Daten ansehen und herunterladen. Der Link funktioniert, bis du ihn widerrufst.",
+  "shareWebCreate": "Weblink erstellen",
+  "shareWebCreating": "Wird veröffentlicht…",
+  "shareWebActiveLinks": "AKTIVE LINKS",
+  "shareWebEmpty": "Noch keine Weblinks.",
+  "shareWebLinkLabel": "Weblink",
+  "shareWebCopy": "Kopieren",
+  "shareWebShare": "Teilen",
+  "shareWebRevoke": "Widerrufen",
+  "shareWebCopied": "Link kopiert"
 }

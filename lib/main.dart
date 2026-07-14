@@ -6,6 +6,7 @@ import 'package:hulaki/app/env.dart';
 import 'package:hulaki/app/providers.dart';
 import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/discovery/supabase_public_directory.dart';
+import 'package:hulaki/features/export/supabase_snapshot_store.dart';
 import 'package:hulaki/features/identity/supabase_admin_registry.dart';
 import 'package:hulaki/features/sync/supabase_blob_store.dart';
 import 'package:hulaki/features/sync/supabase_transport.dart';
@@ -41,6 +42,9 @@ Future<void> main() async {
             ),
           ),
           blobStoreProvider.overrideWithValue(SupabaseBlobStore(client)),
+          snapshotStoreProvider.overrideWithValue(
+            SupabaseSnapshotStore(client),
+          ),
           publicDirectoryProvider.overrideWith(
             (ref) => SupabasePublicDirectory(
               client!,

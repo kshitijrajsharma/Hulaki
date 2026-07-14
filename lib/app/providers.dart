@@ -11,6 +11,8 @@ import 'package:hulaki/features/capture/geolocator_gps_source.dart';
 import 'package:hulaki/features/capture/gps_source.dart';
 import 'package:hulaki/features/capture/live_location.dart';
 import 'package:hulaki/features/discovery/public_directory.dart';
+import 'package:hulaki/features/export/snapshot_publisher.dart';
+import 'package:hulaki/features/export/snapshot_store.dart';
 import 'package:hulaki/features/groups/group_member_view.dart';
 import 'package:hulaki/features/groups/group_service.dart';
 import 'package:hulaki/features/identity/admin_registry.dart';
@@ -29,6 +31,19 @@ final transportProvider = Provider<MessageTransport>(
 );
 
 final blobStoreProvider = Provider<BlobStore>((ref) => InMemoryBlobStore());
+
+/// Stores encrypted web snapshots. In-memory today; swapped for the
+/// Supabase-backed store once the project credentials are wired.
+final snapshotStoreProvider = Provider<SnapshotStore>(
+  (ref) => InMemorySnapshotStore(),
+);
+
+final snapshotPublisherProvider = Provider<SnapshotPublisher>(
+  (ref) => SnapshotPublisher(
+    ref.watch(databaseProvider),
+    ref.watch(snapshotStoreProvider),
+  ),
+);
 
 /// This device's identity keys, created once and kept in the platform keystore.
 /// Overridden in tests with an ephemeral pair.

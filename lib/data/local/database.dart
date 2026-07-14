@@ -192,6 +192,19 @@ class SyncCursors extends Table {
   Set<Column<Object>> get primaryKey => {groupId};
 }
 
+/// A published web snapshot, tracked locally so its author can re-share or
+/// revoke it later. The url holds the per-link key, so it never leaves the
+/// device; only the encrypted snapshot itself reaches the server.
+class WebSnapshots extends Table {
+  TextColumn get id => text()();
+  TextColumn get groupId => text()();
+  TextColumn get url => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// The on-device store. It is the source of truth: chat and map render from
 /// here, and the network only syncs into and out of it.
 @DriftDatabase(
@@ -206,6 +219,7 @@ class SyncCursors extends Table {
     Outbox,
     SyncCursors,
     AdminEvents,
+    WebSnapshots,
   ],
 )
 class LocalDatabase extends _$LocalDatabase {
@@ -213,7 +227,7 @@ class LocalDatabase extends _$LocalDatabase {
     : super(executor ?? driftDatabase(name: 'hulaki'));
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -267,6 +281,9 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 14) {
         await m.addColumn(groups, groups.isSample);
+      }
+      if (from < 15) {
+        await m.createTable(webSnapshots);
       }
     },
   );

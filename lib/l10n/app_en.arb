@@ -1566,5 +1566,57 @@
   "tourSkip": "Skip",
   "@tourSkip": {
     "description": "Guided tour: dismiss the tour early"
+  },
+  "groupShareWebTitle": "Share to web",
+  "@groupShareWebTitle": {
+    "description": "Manage row that opens the web sharing sheet"
+  },
+  "groupShareWebDetail": "A read-only link to view and download",
+  "@groupShareWebDetail": {
+    "description": "Subtitle for the share to web row"
+  },
+  "shareWebTitle": "Share to web",
+  "@shareWebTitle": {
+    "description": "Title of the web sharing sheet"
+  },
+  "shareWebBody": "Publish a read-only web page of this group's points and photos. Anyone with the link can view and download the data. The link works until you revoke it.",
+  "@shareWebBody": {
+    "description": "Explanation in the web sharing sheet"
+  },
+  "shareWebCreate": "Create web link",
+  "@shareWebCreate": {
+    "description": "Button that publishes a new web link"
+  },
+  "shareWebCreating": "Publishing…",
+  "@shareWebCreating": {
+    "description": "Button label while a web link is being published"
+  },
+  "shareWebActiveLinks": "ACTIVE LINKS",
+  "@shareWebActiveLinks": {
+    "description": "Section label above the list of published links"
+  },
+  "shareWebEmpty": "No web links yet.",
+  "@shareWebEmpty": {
+    "description": "Shown when a group has no published web links"
+  },
+  "shareWebLinkLabel": "Web link",
+  "@shareWebLinkLabel": {
+    "description": "Title of a published link row"
+  },
+  "shareWebCopy": "Copy",
+  "@shareWebCopy": {
+    "description": "Tooltip for the copy link action"
+  },
+  "shareWebShare": "Share",
+  "@shareWebShare": {
+    "description": "Tooltip for the share link action"
+  },
+  "shareWebRevoke": "Revoke",
+  "@shareWebRevoke": {
+    "description": "Tooltip for the revoke link action"
+  },
+  "shareWebCopied": "Link copied",
+  "@shareWebCopied": {
+    "description": "Confirmation shown after copying a web link"
   }
 }

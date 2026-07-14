@@ -343,5 +343,18 @@
   "tourMeBody": "Tu perfil, idioma y ajustes de la app están aquí.",
   "tourNext": "Siguiente",
   "tourDone": "Entendido",
-  "tourSkip": "Omitir"
+  "tourSkip": "Omitir",
+  "groupShareWebTitle": "Compartir en la web",
+  "groupShareWebDetail": "Un enlace de solo lectura para ver y descargar",
+  "shareWebTitle": "Compartir en la web",
+  "shareWebBody": "Publica una página web de solo lectura con los puntos y las fotos de este grupo. Cualquiera con el enlace puede ver y descargar los datos. El enlace funciona hasta que lo revoques.",
+  "shareWebCreate": "Crear enlace web",
+  "shareWebCreating": "Publicando…",
+  "shareWebActiveLinks": "ENLACES ACTIVOS",
+  "shareWebEmpty": "Aún no hay enlaces web.",
+  "shareWebLinkLabel": "Enlace web",
+  "shareWebCopy": "Copiar",
+  "shareWebShare": "Compartir",
+  "shareWebRevoke": "Revocar",
+  "shareWebCopied": "Enlace copiado"
 }

@@ -343,5 +343,18 @@
   "tourMeBody": "ملفك الشخصي واللغة وإعدادات التطبيق تظهر هنا.",
   "tourNext": "التالي",
   "tourDone": "فهمت",
-  "tourSkip": "تخطي"
+  "tourSkip": "تخطي",
+  "groupShareWebTitle": "المشاركة على الويب",
+  "groupShareWebDetail": "رابط للقراءة فقط للعرض والتنزيل",
+  "shareWebTitle": "المشاركة على الويب",
+  "shareWebBody": "انشر صفحة ويب للقراءة فقط تعرض نقاط هذه المجموعة وصورها. يمكن لأي شخص لديه الرابط عرض البيانات وتنزيلها. يظل الرابط فعالاً حتى تلغيه.",
+  "shareWebCreate": "إنشاء رابط ويب",
+  "shareWebCreating": "جارٍ النشر…",
+  "shareWebActiveLinks": "الروابط النشطة",
+  "shareWebEmpty": "لا توجد روابط ويب بعد.",
+  "shareWebLinkLabel": "رابط ويب",
+  "shareWebCopy": "نسخ",
+  "shareWebShare": "مشاركة",
+  "shareWebRevoke": "إلغاء",
+  "shareWebCopied": "تم نسخ الرابط"
 }

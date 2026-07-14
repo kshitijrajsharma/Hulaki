@@ -56,5 +56,31 @@ ThemeData buildAppTheme() {
         borderRadius: BorderRadius.all(Radius.circular(AppRadii.card)),
       ),
     ),
+    // Ink-on-white segments to match the units and reach toggles, in place of
+    // the default tinted selection.
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.ink
+              : AppColors.white,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.white
+              : AppColors.textMuted,
+        ),
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: AppColors.mist),
+        ),
+        textStyle: const WidgetStatePropertyAll(
+          TextStyle(
+            fontFamily: AppFonts.sans,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    ),
   );
 }
