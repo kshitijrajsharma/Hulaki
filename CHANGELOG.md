@@ -1,3 +1,9 @@
+## v0.0.11 (2026-07-14)
+
+### Fix
+
+- **pill**: communnity local global
+
 ## v0.0.10 (2026-07-14)
 
 ### Fix
