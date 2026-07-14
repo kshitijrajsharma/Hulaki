@@ -1,3 +1,9 @@
+## v0.0.8 (2026-07-14)
+
+### Fix
+
+- **viewer**: fix publishing the project with global community
+
 ## v0.0.7 (2026-07-14)
 
 ### Fix
