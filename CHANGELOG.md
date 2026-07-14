@@ -1,3 +1,9 @@
+## v0.0.9 (2026-07-14)
+
+### Fix
+
+- **tutorial**: to follow all the way to chats
+
 ## v0.0.8 (2026-07-14)
 
 ### Fix
