@@ -63,6 +63,13 @@ class _AppShellState extends ConsumerState<AppShell> {
       title: l10n.tourMeTitle,
       body: l10n.tourMeBody,
     ),
+    TourStep(
+      tabIndex: 0,
+      sampleRow: true,
+      icon: Icons.science_outlined,
+      title: l10n.tourSampleTitle,
+      body: l10n.tourSampleBody,
+    ),
   ];
 
   Future<void> _finishTour() async {

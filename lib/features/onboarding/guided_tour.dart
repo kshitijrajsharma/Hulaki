@@ -3,8 +3,9 @@ import 'package:hulaki/design/app_colors.dart';
 import 'package:hulaki/design/app_spacing.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
 
-/// One stop on the guided tour: a bottom-nav destination ([tabIndex]), or the
-/// Chats floating action button when [fab] is set, plus the words to show.
+/// One stop on the guided tour: a bottom-nav destination ([tabIndex]), the
+/// Chats floating action button when [fab] is set, or the first row of the
+/// Chats list when [sampleRow] is set, plus the words to show.
 class TourStep {
   const TourStep({
     required this.tabIndex,
@@ -12,6 +13,7 @@ class TourStep {
     required this.title,
     required this.body,
     this.fab = false,
+    this.sampleRow = false,
   });
 
   final int tabIndex;
@@ -19,6 +21,7 @@ class TourStep {
   final String title;
   final String body;
   final bool fab;
+  final bool sampleRow;
 }
 
 /// A one-time spotlight tour that dims the app and lights up one destination at
@@ -71,6 +74,15 @@ class _GuidedTourState extends State<GuidedTour> {
     final navTop = media.size.height - media.viewPadding.bottom - navHeight;
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final step = widget.steps[_current];
+    if (step.sampleRow) {
+      final top = media.viewPadding.top + kToolbarHeight + AppSpacing.sm;
+      return Rect.fromLTWH(
+        AppSpacing.sm,
+        top,
+        media.size.width - AppSpacing.sm * 2,
+        76,
+      );
+    }
     if (step.fab) {
       final centerX = rtl
           ? _fabMargin + _fabSize / 2

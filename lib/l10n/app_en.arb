@@ -1555,6 +1555,14 @@
   "@tourMeBody": {
     "description": "Guided tour: what the Me tab is for"
   },
+  "tourSampleTitle": "Your sample project",
+  "@tourSampleTitle": {
+    "description": "Guided tour: title for the seeded sample group"
+  },
+  "tourSampleBody": "We set this one up for you. Tap to open it, drop a point, and watch it appear on the map.",
+  "@tourSampleBody": {
+    "description": "Guided tour: what the sample group is for"
+  },
   "tourNext": "Next",
   "@tourNext": {
     "description": "Guided tour: advance to the next stop"
