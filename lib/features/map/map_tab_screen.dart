@@ -90,7 +90,11 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
                 _CommunityClusterCard(
                   count: cluster.members.length,
                   offset: cluster.offset,
-                  onTap: () => unawaited(_zoomInto(cluster.center)),
+                  onTap: () => unawaited(
+                    _expandCluster([
+                      for (final m in cluster.members) m.center,
+                    ]),
+                  ),
                 ),
           if (_showCommunities)
             for (final cluster in _communityClusters)
@@ -104,7 +108,13 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
                 _CommunityClusterCard(
                   count: cluster.members.length,
                   offset: cluster.offset,
-                  onTap: () => unawaited(_zoomInto(cluster.center)),
+                  onTap: () => unawaited(
+                    _expandCluster([
+                      for (final m in cluster.members)
+                        if (m.centerLat != null && m.centerLng != null)
+                          LatLng(m.centerLat!, m.centerLng!),
+                    ]),
+                  ),
                 ),
           SafeArea(
             child: Padding(
@@ -460,11 +470,40 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
     return clusters;
   }
 
-  /// Zooms toward a cluster so it separates into its individual groups.
-  Future<void> _zoomInto(LatLng center) async {
-    final zoom = (_controller?.cameraPosition?.zoom ?? 11) + 2;
-    await _controller?.animateCamera(
-      CameraUpdate.newLatLngZoom(center, zoom),
+  Future<void> _expandCluster(List<LatLng> centers) async {
+    final controller = _controller;
+    if (controller == null || centers.isEmpty) return;
+    var minLat = centers.first.latitude;
+    var maxLat = minLat;
+    var minLng = centers.first.longitude;
+    var maxLng = minLng;
+    for (final c in centers) {
+      minLat = c.latitude < minLat ? c.latitude : minLat;
+      maxLat = c.latitude > maxLat ? c.latitude : maxLat;
+      minLng = c.longitude < minLng ? c.longitude : minLng;
+      maxLng = c.longitude > maxLng ? c.longitude : maxLng;
+    }
+    if (maxLat - minLat < 0.0005 && maxLng - minLng < 0.0005) {
+      final zoom = ((controller.cameraPosition?.zoom ?? 11) + 3).clamp(
+        1.0,
+        18.0,
+      );
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(centers.first, zoom),
+      );
+      return;
+    }
+    await controller.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        left: 60,
+        right: 60,
+        top: 160,
+        bottom: 180,
+      ),
     );
   }
 

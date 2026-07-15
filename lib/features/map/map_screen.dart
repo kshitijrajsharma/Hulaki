@@ -959,7 +959,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     Annotation? annotation,
   ) {
     if (layerId == 'clusters') {
-      final zoom = (_controller?.cameraPosition?.zoom ?? 14) + 2;
+      final current = _controller?.cameraPosition?.zoom ?? 14;
+      final double zoom = max(current + 2, 15);
       unawaited(
         _controller?.animateCamera(
           CameraUpdate.newLatLngZoom(coordinates, zoom),

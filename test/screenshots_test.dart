@@ -32,6 +32,9 @@ void main() {
   const session = {
     'session.userId': 'device-1',
     'session.username': 'field_tester',
+    // Skip the first-run intro so the shell renders and its screens are what
+    // gets captured, not the onboarding carousel.
+    'intro.seen': true,
   };
 
   testWidgets('welcome', (tester) async {
@@ -108,6 +111,7 @@ Future<void> _pumpApp(
   if (db == null) addTearDown(database.close);
   tester.view.devicePixelRatio = 2;
   await tester.binding.setSurfaceSize(const Size(390, 844));
+  _mockPlugins(tester);
   SharedPreferences.setMockInitialValues(prefs);
   final preferences = await SharedPreferences.getInstance();
   await tester.pumpWidget(
@@ -120,6 +124,27 @@ Future<void> _pumpApp(
     ),
   );
   await _settle(tester);
+}
+
+/// Silences the platform plugins the shell and thread touch (deep links,
+/// compass, location) so a headless golden run does not throw
+/// MissingPluginException. Streams stay empty and lookups return nothing, which
+/// renders the neutral "locating" states.
+void _mockPlugins(WidgetTester tester) {
+  final messenger = tester.binding.defaultBinaryMessenger;
+  for (final channel in const [
+    'com.llfbandit.app_links/messages',
+    'com.llfbandit.app_links/events',
+    'hemanthraj/flutter_compass',
+    'flutter.baseflow.com/geolocator',
+    'flutter.baseflow.com/geolocator_updates',
+    'flutter.baseflow.com/geolocator_service_updates',
+  ]) {
+    messenger.setMockMethodCallHandler(
+      MethodChannel(channel),
+      (call) async => null,
+    );
+  }
 }
 
 Future<void> _settle(WidgetTester tester, [int frames = 14]) async {

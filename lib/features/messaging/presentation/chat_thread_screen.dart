@@ -697,17 +697,32 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                                   ? null
                                   : Color(tag.colorValue);
                               final isHighlight = message.id == _highlightId;
+                              final glow = isHighlight && _highlightActive;
                               return AnimatedContainer(
                                 key: isHighlight ? _highlightKey : null,
                                 duration: const Duration(milliseconds: 320),
                                 curve: Curves.easeOut,
                                 decoration: BoxDecoration(
-                                  color: isHighlight && _highlightActive
-                                      ? AppColors.ink.withValues(alpha: 0.06)
-                                      : const Color(0x00000000),
                                   borderRadius: BorderRadius.circular(
                                     AppRadii.bubble,
                                   ),
+                                  border: Border.all(
+                                    width: 1.5,
+                                    color: glow
+                                        ? AppColors.amber.withValues(alpha: 0.6)
+                                        : const Color(0x00000000),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: glow
+                                          ? AppColors.amber.withValues(
+                                              alpha: 0.4,
+                                            )
+                                          : const Color(0x00000000),
+                                      blurRadius: glow ? 14 : 0,
+                                      spreadRadius: glow ? 1 : 0,
+                                    ),
+                                  ],
                                 ),
                                 child: GestureDetector(
                                   onLongPress: () =>
