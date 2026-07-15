@@ -291,6 +291,14 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           located.map((m) => m.lat!).reduce((a, b) => a + b) / located.length;
       initialLng =
           located.map((m) => m.lng!).reduce((a, b) => a + b) / located.length;
+    } else {
+      // No points yet: open on the user's location so an empty group does not
+      // fly in from the world placeholder either.
+      final live = ref.read(liveLocationProvider).asData?.value;
+      if (live != null) {
+        initialLat = live.lat;
+        initialLng = live.lng;
+      }
     }
     final staged = await Navigator.of(context).push<Object?>(
       MaterialPageRoute<Object?>(
