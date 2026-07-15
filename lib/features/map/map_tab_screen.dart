@@ -83,7 +83,7 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
                   area: cluster.members.first,
                   offset: cluster.offset,
                   onTap: () => unawaited(
-                    _openGroup(cluster.members.first.group, l10n.mapBack),
+                    _openGroup(cluster.members.first, l10n.mapBack),
                   ),
                 )
               else
@@ -479,17 +479,21 @@ class _MapTabScreenState extends ConsumerState<MapTabScreen> {
     final index = int.tryParse(id);
     if (index == null || index < 0 || index >= _areas.length) return;
     unawaited(
-      _openGroup(_areas[index].group, AppLocalizations.of(context).mapBack),
+      _openGroup(_areas[index], AppLocalizations.of(context).mapBack),
     );
   }
 
-  Future<void> _openGroup(Group group, String backLabel) async {
+  Future<void> _openGroup(_MapArea area, String backLabel) async {
+    final group = area.group;
+    final center = area.center;
     final staged = await Navigator.of(context).push<Object?>(
       MaterialPageRoute<Object?>(
         builder: (_) => MapScreen(
           groupId: group.id,
           groupName: group.name,
           backLabel: backLabel,
+          initialLat: center.latitude,
+          initialLng: center.longitude,
         ),
       ),
     );

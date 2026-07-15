@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart'
@@ -34,6 +35,8 @@ class MapScreen extends ConsumerStatefulWidget {
     required this.groupName,
     this.focusMessageId,
     this.backLabel,
+    this.initialLat,
+    this.initialLng,
     super.key,
   });
 
@@ -43,6 +46,12 @@ class MapScreen extends ConsumerStatefulWidget {
   /// Label on the back control, so the map reads correctly whether it was
   /// opened from a chat or from the Map tab. Null reads as the chat label.
   final String? backLabel;
+
+  /// An approximate opening centre, so the map appears already on the group's
+  /// data instead of on the world placeholder and flying in. The style-load
+  /// callback still frames the exact extent from here, a small adjustment.
+  final double? initialLat;
+  final double? initialLng;
 
   /// When set, the map centers on this point and opens its detail sheet once
   /// the pins are ready. Used when arriving from a point's mini-map.
@@ -187,8 +196,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (controller == null) return;
     // The first paint after a style load does not always draw the symbols on
     // iOS until the map redraws. The camera settling is that first redraw, so
-    // push the points once more here.
-    if (_sourcesReady && !_paintedOnce) {
+    // push the points once more here. Android paints on the first push, so
+    // repeating it there only makes the pins flicker.
+    if (_sourcesReady &&
+        !_paintedOnce &&
+        defaultTargetPlatform == TargetPlatform.iOS) {
       _paintedOnce = true;
       await _refreshPins();
     }
@@ -257,13 +269,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             styleString: _satellite
                 ? MapScreen._satelliteStyle
                 : MapScreen._osmStyle,
-            // A neutral world view as a placeholder only: the style-load
-            // callback snaps to the task area, points, or the user at once, so
-            // this is never a real place the map appears to open on.
-            initialCameraPosition: const CameraPosition(
-              target: LatLng(20, 0),
-              zoom: 1,
-            ),
+            // Open on the group's data when the caller knows roughly where it
+            // is, so the map never flies in from a world placeholder. Falls
+            // back to a neutral world view; the style-load callback frames the
+            // exact extent either way.
+            initialCameraPosition:
+                widget.initialLat != null && widget.initialLng != null
+                ? CameraPosition(
+                    target: LatLng(widget.initialLat!, widget.initialLng!),
+                    zoom: 15,
+                  )
+                : const CameraPosition(target: LatLng(20, 0), zoom: 1),
             myLocationEnabled: true,
             myLocationRenderMode: MyLocationRenderMode.compass,
             // Drop the rotation compass below the header and GPS strip so the
@@ -549,20 +565,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (focusId != null && await _focusMessage(focusId)) return;
 
     // One deterministic framing on first open, in priority order: the mapping
-    // area, else the points, else the user's location. The recenter button
-    // jumps back to your location on demand. Pins paint via _settlePins, so no
-    // throwaway camera move is needed to force them.
+    // area, else the points, else the user's location. Instant so the map opens
+    // already on the data instead of flying in from the world placeholder. The
+    // recenter button jumps back to your location on demand.
     if (_aoiGeoJson != null) {
-      await _frameAoi();
+      await _frameAoi(instant: true);
       return;
     }
     if ((collection['features'] as List).isNotEmpty) {
-      await _centerOnData(collection);
+      await _centerOnData(collection, instant: true);
       return;
     }
     final me = _lastLocation;
     if (me != null) {
-      await _controller?.animateCamera(CameraUpdate.newLatLngZoom(me, _zoom));
+      await _applyCamera(
+        CameraUpdate.newLatLngZoom(me, _zoom),
+        instant: true,
+      );
       return;
     }
     _pendingInitialCenter = true;
@@ -600,13 +619,29 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
+  /// Applies a camera update: instant on Android for a flicker-free first
+  /// frame, animated otherwise. iOS drops an instant move right after a style
+  /// load, so it always animates.
+  Future<void> _applyCamera(
+    CameraUpdate update, {
+    bool instant = false,
+  }) async {
+    final controller = _controller;
+    if (controller == null) return;
+    if (instant && defaultTargetPlatform == TargetPlatform.android) {
+      await controller.moveCamera(update);
+    } else {
+      await controller.animateCamera(update);
+    }
+  }
+
   /// Frames the group's mapping area, if it has one.
-  Future<void> _frameAoi() async {
+  Future<void> _frameAoi({bool instant = false}) async {
     final aoi = _aoiGeoJson;
     if (aoi == null) return;
     final bounds = aoiBounds(aoi);
     if (bounds == null) return;
-    await _controller?.animateCamera(
+    await _applyCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: LatLng(bounds[1], bounds[0]),
@@ -617,6 +652,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         top: 140,
         bottom: 40,
       ),
+      instant: instant,
     );
   }
 
@@ -738,7 +774,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _centerOnData(Map<String, dynamic> collection) async {
+  Future<void> _centerOnData(
+    Map<String, dynamic> collection, {
+    bool instant = false,
+  }) async {
     final features = collection['features'] as List;
     if (features.isEmpty) return;
     final coordinates = [
@@ -753,15 +792,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final maxLng = lngs.reduce(max);
 
     if (maxLat - minLat < 0.002 && maxLng - minLng < 0.002) {
-      await _controller?.animateCamera(
+      await _applyCamera(
         CameraUpdate.newLatLngZoom(
           LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2),
           16,
         ),
+        instant: instant,
       );
       return;
     }
-    await _controller?.animateCamera(
+    await _applyCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: LatLng(minLat, minLng),
@@ -772,6 +812,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         top: 140,
         bottom: 60,
       ),
+      instant: instant,
     );
   }
 
@@ -809,15 +850,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (mounted && !_pointsSettled) setState(() => _pointsSettled = true);
   }
 
-  /// Re-pushes the points a few times over the first second after a style load.
-  /// Each push forces a redraw, so the pins appear even on iOS, which otherwise
-  /// leaves symbols unpainted until the map is touched.
+  /// Re-pushes the points once shortly after a style load. Only iOS needs it:
+  /// it otherwise leaves symbols unpainted until the map is touched. A single
+  /// push is enough to paint them; the earlier three-push burst made the pins
+  /// flicker on open. Android paints on the first push, so it is skipped there.
   Future<void> _settlePins() async {
-    for (final delayMs in const [200, 500, 900]) {
-      await Future<void>.delayed(Duration(milliseconds: delayMs));
-      if (!mounted || _controller == null || !_sourcesReady) return;
-      await _refreshPins();
-    }
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (!mounted || _controller == null || !_sourcesReady) return;
+    await _refreshPins();
   }
 
   /// Switches the map between everyone's points and only the current user's.

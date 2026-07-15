@@ -10,7 +10,6 @@ import 'package:hulaki/data/local/database.dart';
 import 'package:hulaki/data/local/database_provider.dart';
 import 'package:hulaki/design/app_colors.dart';
 import 'package:hulaki/design/app_spacing.dart';
-import 'package:hulaki/design/widgets/info_dot.dart';
 import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/discovery/listing_publisher.dart';
 import 'package:hulaki/features/discovery/public_directory.dart';
@@ -827,10 +826,8 @@ class _ModerationCard extends StatelessWidget {
                   Icons.verified_user_outlined,
                   color: AppColors.ink,
                 ),
-                title: _ModTitle(
-                  label: l10n.groupRequireApproval,
-                  detail: l10n.groupRequireApprovalDetail,
-                ),
+                title: Text(l10n.groupRequireApproval),
+                subtitle: Text(l10n.groupRequireApprovalDetail),
                 value: joinApproval,
                 onChanged: onToggleApproval,
               ),
@@ -841,10 +838,8 @@ class _ModerationCard extends StatelessWidget {
                 Icons.download_outlined,
                 color: AppColors.ink,
               ),
-              title: _ModTitle(
-                label: l10n.groupAllowMemberExport,
-                detail: l10n.groupAllowMemberExportDetail,
-              ),
+              title: Text(l10n.groupAllowMemberExport),
+              subtitle: Text(l10n.groupAllowMemberExportDetail),
               value: allowMemberExport,
               onChanged: onToggleMemberExport,
             ),
@@ -854,10 +849,8 @@ class _ModerationCard extends StatelessWidget {
                 Icons.add_location_alt_outlined,
                 color: AppColors.ink,
               ),
-              title: _ModTitle(
-                label: l10n.groupAllowMemberPlace,
-                detail: l10n.groupAllowMemberPlaceDetail,
-              ),
+              title: Text(l10n.groupAllowMemberPlace),
+              subtitle: Text(l10n.groupAllowMemberPlaceDetail),
               value: allowMemberPlace,
               onChanged: onToggleMemberPlace,
             ),
@@ -867,10 +860,8 @@ class _ModerationCard extends StatelessWidget {
                 Icons.label_outline,
                 color: AppColors.ink,
               ),
-              title: _ModTitle(
-                label: l10n.groupAllowMemberTags,
-                detail: l10n.groupAllowMemberTagsDetail,
-              ),
+              title: Text(l10n.groupAllowMemberTags),
+              subtitle: Text(l10n.groupAllowMemberTagsDetail),
               value: allowMemberTags,
               onChanged: onToggleMemberTags,
             ),
@@ -880,10 +871,8 @@ class _ModerationCard extends StatelessWidget {
                 Icons.chat_bubble_outline,
                 color: AppColors.ink,
               ),
-              title: _ModTitle(
-                label: l10n.groupAllowChatMode,
-                detail: l10n.groupAllowChatModeDetail,
-              ),
+              title: Text(l10n.groupAllowChatMode),
+              subtitle: Text(l10n.groupAllowChatModeDetail),
               value: allowChatMode,
               onChanged: onToggleChatMode,
             ),
@@ -894,10 +883,8 @@ class _ModerationCard extends StatelessWidget {
                   Icons.fmd_bad_outlined,
                   color: AppColors.ink,
                 ),
-                title: _ModTitle(
-                  label: l10n.groupAllowOutsideArea,
-                  detail: l10n.groupAllowOutsideAreaDetail,
-                ),
+                title: Text(l10n.groupAllowOutsideArea),
+                subtitle: Text(l10n.groupAllowOutsideAreaDetail),
                 value: allowOutsideArea,
                 onChanged: onToggleOutsideArea,
               ),
@@ -923,27 +910,6 @@ class _ModerationCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// A moderation row's title: the option name with a small info dot that opens
-/// its explanation, so the list stays scannable instead of carrying a subtitle
-/// under every switch.
-class _ModTitle extends StatelessWidget {
-  const _ModTitle({required this.label, required this.detail});
-
-  final String label;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Flexible(child: Text(label)),
-        const SizedBox(width: AppSpacing.xs),
-        InfoDot(title: label, message: detail),
-      ],
     );
   }
 }

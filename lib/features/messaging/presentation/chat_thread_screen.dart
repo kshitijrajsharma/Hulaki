@@ -277,10 +277,29 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   /// Opens the group map. If the user taps a spot there to place a point, the
   /// map returns it and the next send drops at that location.
   Future<void> _openMap() async {
+    // Hand the map a rough centre from the points already loaded here, so it
+    // opens on the group's data instead of flying in from the world view.
+    final located =
+        (ref.read(messagesProvider(widget.groupId)).asData?.value ??
+                const <Message>[])
+            .where((m) => m.lat != null && m.lng != null)
+            .toList();
+    double? initialLat;
+    double? initialLng;
+    if (located.isNotEmpty) {
+      initialLat =
+          located.map((m) => m.lat!).reduce((a, b) => a + b) / located.length;
+      initialLng =
+          located.map((m) => m.lng!).reduce((a, b) => a + b) / located.length;
+    }
     final staged = await Navigator.of(context).push<Object?>(
       MaterialPageRoute<Object?>(
-        builder: (_) =>
-            MapScreen(groupId: widget.groupId, groupName: widget.groupName),
+        builder: (_) => MapScreen(
+          groupId: widget.groupId,
+          groupName: widget.groupName,
+          initialLat: initialLat,
+          initialLng: initialLng,
+        ),
       ),
     );
     if (staged is StagedPoint && mounted) {
