@@ -1,3 +1,15 @@
+## v0.0.15 (2026-07-16)
+
+### Feat
+
+- **task**: add tasxks split feature
+
+### Fix
+
+- **split**: fix overflow of choosing splits
+- **overflow**: fix pick zone overflow
+- **ui**: with minui map grid in area
+
 ## v0.0.14 (2026-07-15)
 
 ### Fix
