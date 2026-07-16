@@ -412,5 +412,10 @@
   "zoneInvalidImport": "هذا الملف لا يحتوي على مناطق.",
   "zoneCoverageTitle": "التغطية",
   "zoneCoverageSummary": "{points, plural, =1{نقطة واحدة} other{{points} نقطة}} عبر {zones, plural, =1{منطقة واحدة} other{{zones} منطقة}}",
-  "zoneNeedsMapper": "يحتاج إلى شخص"
+  "zoneNeedsMapper": "يحتاج إلى شخص",
+  "groupAreaHeading": "منطقة رسم الخرائط",
+  "groupAreaBoundary": "الحدود",
+  "groupAreaBoundaryDetail": "ارسم منطقة المسح أو أعد رسمها",
+  "zoneCoverageEntryDetail": "النقاط والراسمون لكل منطقة",
+  "zoneCoverageExplain": "النقاط ومن يرسم كل منطقة. تُظهر الخريطة أيها أي."
 }

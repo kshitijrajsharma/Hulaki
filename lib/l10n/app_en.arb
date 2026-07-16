@@ -481,6 +481,26 @@
   "@zoneManageSubtitle": {
     "description": "Subtitle of the zone management screen"
   },
+  "groupAreaHeading": "MAPPING AREA",
+  "@groupAreaHeading": {
+    "description": "Section header grouping the area boundary, zones and coverage"
+  },
+  "groupAreaBoundary": "Boundary",
+  "@groupAreaBoundary": {
+    "description": "Row that opens the mapping-area drawing screen"
+  },
+  "groupAreaBoundaryDetail": "Draw or redraw the survey area",
+  "@groupAreaBoundaryDetail": {
+    "description": "Subtitle of the boundary row"
+  },
+  "zoneCoverageEntryDetail": "Points and mappers per zone",
+  "@zoneCoverageEntryDetail": {
+    "description": "Subtitle of the coverage row in group settings"
+  },
+  "zoneCoverageExplain": "Points and who is mapping each zone. The map shows which is which.",
+  "@zoneCoverageExplain": {
+    "description": "Explanation shown on the coverage screen"
+  },
   "zoneManageEntry": "Zones",
   "@zoneManageEntry": {
     "description": "Group settings row that opens zone management"

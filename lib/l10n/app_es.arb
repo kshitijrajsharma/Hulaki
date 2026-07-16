@@ -412,5 +412,10 @@
   "zoneInvalidImport": "Ese archivo no tiene zonas.",
   "zoneCoverageTitle": "Cobertura",
   "zoneCoverageSummary": "{points, plural, =1{1 punto} other{{points} puntos}} en {zones, plural, =1{1 zona} other{{zones} zonas}}",
-  "zoneNeedsMapper": "Necesita una persona"
+  "zoneNeedsMapper": "Necesita una persona",
+  "groupAreaHeading": "ÁREA DE MAPEO",
+  "groupAreaBoundary": "Límite",
+  "groupAreaBoundaryDetail": "Dibuja o vuelve a dibujar el área de estudio",
+  "zoneCoverageEntryDetail": "Puntos y personas por zona",
+  "zoneCoverageExplain": "Puntos y quién mapea cada zona. El mapa muestra cuál es cuál."
 }

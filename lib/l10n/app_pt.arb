@@ -412,5 +412,10 @@
   "zoneInvalidImport": "Esse arquivo não tem zonas.",
   "zoneCoverageTitle": "Cobertura",
   "zoneCoverageSummary": "{points, plural, =1{1 ponto} other{{points} pontos}} em {zones, plural, =1{1 zona} other{{zones} zonas}}",
-  "zoneNeedsMapper": "Precisa de alguém"
+  "zoneNeedsMapper": "Precisa de alguém",
+  "groupAreaHeading": "ÁREA DE MAPEAMENTO",
+  "groupAreaBoundary": "Limite",
+  "groupAreaBoundaryDetail": "Desenhe ou redesenhe a área do levantamento",
+  "zoneCoverageEntryDetail": "Pontos e mapeadores por zona",
+  "zoneCoverageExplain": "Pontos e quem mapeia cada zona. O mapa mostra qual é qual."
 }

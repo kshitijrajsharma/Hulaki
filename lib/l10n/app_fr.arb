@@ -412,5 +412,10 @@
   "zoneInvalidImport": "Ce fichier ne contient aucune zone.",
   "zoneCoverageTitle": "Couverture",
   "zoneCoverageSummary": "{points, plural, =1{1 point} other{{points} points}} sur {zones, plural, =1{1 zone} other{{zones} zones}}",
-  "zoneNeedsMapper": "Besoin d'une personne"
+  "zoneNeedsMapper": "Besoin d'une personne",
+  "groupAreaHeading": "ZONE DE CARTOGRAPHIE",
+  "groupAreaBoundary": "Limite",
+  "groupAreaBoundaryDetail": "Dessinez ou redessinez la zone d'étude",
+  "zoneCoverageEntryDetail": "Points et cartographes par zone",
+  "zoneCoverageExplain": "Points et qui cartographie chaque zone. La carte montre laquelle est laquelle."
 }

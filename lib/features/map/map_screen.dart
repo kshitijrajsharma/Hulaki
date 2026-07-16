@@ -23,7 +23,6 @@ import 'package:hulaki/features/map/point_sheet.dart';
 import 'package:hulaki/features/onboarding/coach_tip.dart';
 import 'package:hulaki/features/track/track_recorder.dart';
 import 'package:hulaki/features/zones/domain/zone.dart';
-import 'package:hulaki/features/zones/domain/zone_bucketing.dart';
 import 'package:hulaki/features/zones/presentation/zone_picker_sheet.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide buildFeatureCollection;
@@ -1035,9 +1034,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     };
   }
 
-  /// Draws the group's zones as coloured outlines, the member's own zone in ink
-  /// so it reads at a glance. No-op when the area is not split, so a group with
-  /// no zones renders exactly as before.
+  /// Draws the group's zones as coloured outlines with their name, the member's
+  /// own zone in ink so it reads at a glance. No-op when the area is not split,
+  /// so a group with no zones renders exactly as before.
   Future<void> _addZoneLayers(MapLibreMapController controller) async {
     final data = await _zonesData();
     if (data == null) return;
@@ -1056,12 +1055,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       'zones',
       'zones-label',
       const SymbolLayerProperties(
-        textField: [Expressions.get, 'label'],
+        textField: [Expressions.get, 'name'],
         textSize: 13,
         textColor: '#15181B',
         textHaloColor: '#F6F4EE',
         textHaloWidth: 1.4,
-        textFont: ['Open Sans Regular'],
+        textFont: ['Open Sans Semibold'],
         symbolPlacement: 'point',
       ),
     );
@@ -1077,21 +1076,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     await controller.setGeoJsonSource('zones', data);
   }
 
-  /// The zones as a FeatureCollection with per-feature colour, width and label,
-  /// or null when the group has no split. Honours the label and only-my-zone
-  /// toggles: an empty label hides a zone's name, and only-my-zone drops the
-  /// other zones' features entirely.
+  /// The zones as a FeatureCollection with per-feature colour, width and name,
+  /// or null when the group has no split. Only-my-zone drops the other zones.
   Future<Map<String, dynamic>?> _zonesData() async {
     final db = ref.read(databaseProvider);
     final group = await db.groupById(widget.groupId);
     final allZones = zonesFromGeoJson(group?.zonesGeoJson);
     if (allZones.isEmpty) return null;
     final assignedId = ref.read(myAssignedZoneProvider(widget.groupId))?.id;
-    final located = (await db.messagesFor(widget.groupId))
-        .where((m) => m.lat != null && m.lng != null)
-        .map((m) => (lat: m.lat!, lng: m.lng!))
-        .toList();
-    final counts = countsByZone(allZones, located);
     final zones = (_mineOnly && assignedId != null)
         ? allZones.where((zone) => zone.id == assignedId).toList()
         : allZones;
@@ -1102,11 +1094,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           {
             'type': 'Feature',
             'properties': {
+              'name': zone.name,
               'lineColor': zone.id == assignedId
                   ? '#15181B'
                   : _hexColor(zone.colorValue),
               'lineWidth': zone.id == assignedId ? 3.0 : 1.8,
-              'label': _zoneLabel(zone, counts[zone.id]!),
             },
             'geometry': {
               'type': 'MultiPolygon',
@@ -1118,9 +1110,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ],
     };
   }
-
-  String _zoneLabel(Zone zone, int count) =>
-      count > 0 ? '${zone.name}  $count' : zone.name;
 
   String _hexColor(int argb) =>
       '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';

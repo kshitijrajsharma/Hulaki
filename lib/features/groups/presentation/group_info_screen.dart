@@ -461,9 +461,6 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                 caching: _caching,
                 canExport: iAmAdmin || group.allowMemberExport,
                 exportForEveryone: group.allowMemberExport,
-                canEditArea: iAmAdmin,
-                hasArea: group.aoiGeoJson != null,
-                onEditArea: () => unawaited(_editMappingArea(group.id)),
                 onEditHotKeys: () => _editHotKeys(
                   context,
                   ref,
@@ -487,9 +484,10 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
               ),
               if (iAmAdmin) ...[
                 const SizedBox(height: AppSpacing.lg),
-                _ZonesCard(
+                _AreaCard(
                   groupId: group.id,
                   hasZones: group.zonesGeoJson != null,
+                  onEditArea: () => unawaited(_editMappingArea(group.id)),
                 ),
               ],
               if (iAmAdmin && group.isPublic && group.joinApproval) ...[
@@ -1535,11 +1533,16 @@ class _MemberRow extends StatelessWidget {
   }
 }
 
-class _ZonesCard extends StatelessWidget {
-  const _ZonesCard({required this.groupId, required this.hasZones});
+class _AreaCard extends StatelessWidget {
+  const _AreaCard({
+    required this.groupId,
+    required this.hasZones,
+    required this.onEditArea,
+  });
 
   final String groupId;
   final bool hasZones;
+  final VoidCallback onEditArea;
 
   @override
   Widget build(BuildContext context) {
@@ -1554,6 +1557,37 @@ class _ZonesCard extends StatelessWidget {
         color: AppColors.white,
         child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  l10n.groupAreaHeading,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.map_outlined, color: AppColors.ink),
+              title: Text(l10n.groupAreaBoundary),
+              subtitle: Text(l10n.groupAreaBoundaryDetail),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: AppColors.textFaint,
+              ),
+              onTap: onEditArea,
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(
                 Icons.grid_view_outlined,
@@ -1579,6 +1613,7 @@ class _ZonesCard extends StatelessWidget {
                   color: AppColors.ink,
                 ),
                 title: Text(l10n.zoneCoverageTitle),
+                subtitle: Text(l10n.zoneCoverageEntryDetail),
                 trailing: const Icon(
                   Icons.chevron_right,
                   color: AppColors.textFaint,
@@ -1602,9 +1637,6 @@ class _ManageCard extends StatelessWidget {
     required this.caching,
     required this.canExport,
     required this.exportForEveryone,
-    required this.canEditArea,
-    required this.hasArea,
-    required this.onEditArea,
     required this.onEditHotKeys,
     required this.onMakeOffline,
     required this.onExport,
@@ -1614,9 +1646,6 @@ class _ManageCard extends StatelessWidget {
   final bool caching;
   final bool canExport;
   final bool exportForEveryone;
-  final bool canEditArea;
-  final bool hasArea;
-  final VoidCallback onEditArea;
   final VoidCallback onEditHotKeys;
   final VoidCallback onMakeOffline;
   final VoidCallback onExport;
@@ -1644,30 +1673,6 @@ class _ManageCard extends StatelessWidget {
               ),
               onTap: onEditHotKeys,
             ),
-            if (canEditArea) ...[
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(
-                  Icons.map_outlined,
-                  color: AppColors.ink,
-                ),
-                title: Text(
-                  hasArea
-                      ? l10n.groupEditMappingArea
-                      : l10n.groupSetMappingArea,
-                ),
-                subtitle: Text(
-                  hasArea
-                      ? l10n.groupEditMappingAreaDetail
-                      : l10n.groupSetMappingAreaDetail,
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.textFaint,
-                ),
-                onTap: onEditArea,
-              ),
-            ],
             const Divider(height: 1),
             ListTile(
               leading: const Icon(

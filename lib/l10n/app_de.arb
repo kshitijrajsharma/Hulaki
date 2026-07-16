@@ -412,5 +412,10 @@
   "zoneInvalidImport": "Diese Datei enthält keine Zonen.",
   "zoneCoverageTitle": "Abdeckung",
   "zoneCoverageSummary": "{points, plural, =1{1 Punkt} other{{points} Punkte}} in {zones, plural, =1{1 Zone} other{{zones} Zonen}}",
-  "zoneNeedsMapper": "Braucht jemanden"
+  "zoneNeedsMapper": "Braucht jemanden",
+  "groupAreaHeading": "KARTIERUNGSGEBIET",
+  "groupAreaBoundary": "Grenze",
+  "groupAreaBoundaryDetail": "Das Erhebungsgebiet zeichnen oder neu zeichnen",
+  "zoneCoverageEntryDetail": "Punkte und Kartierer pro Zone",
+  "zoneCoverageExplain": "Punkte und wer jede Zone kartiert. Die Karte zeigt, welche welche ist."
 }
