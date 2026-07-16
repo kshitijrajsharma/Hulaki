@@ -17,7 +17,12 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 /// Draw a mapping area by tapping the map to drop polygon corners. Returns the
 /// area as a GeoJSON string, or null if skipped.
 class AreaDrawScreen extends StatefulWidget {
-  const AreaDrawScreen({super.key});
+  const AreaDrawScreen({this.initialArea, super.key});
+
+  /// The group's current mapping area, so editing opens on it (drawn and
+  /// framed) rather than a blank canvas. Null when setting an area for the
+  /// first time.
+  final String? initialArea;
 
   static const _styleUrl =
       'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
@@ -31,6 +36,12 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
   final List<LatLng> _points = [];
   final _searchController = TextEditingController();
   bool _locating = false;
+  bool _readOnlyArea = false;
+
+  /// Above this many corners an area is treated as imported: shown read-only to
+  /// clear or replace, since editing thousands of vertices by tapping is not
+  /// feasible and would choke the map.
+  static const _maxEditableVertices = 50;
 
   @override
   void dispose() {
@@ -50,6 +61,11 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
             tooltip: l10n.groupImportGeoJson,
             onPressed: () => unawaited(_importGeoJson(l10n)),
           ),
+          if (_points.isNotEmpty || _readOnlyArea)
+            TextButton(
+              onPressed: _clear,
+              child: Text(l10n.groupClearArea),
+            ),
           if (_points.isNotEmpty)
             TextButton(
               onPressed: _undo,
@@ -143,7 +159,9 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
                     ],
                   ),
                   child: Text(
-                    _points.length < 3
+                    _readOnlyArea
+                        ? l10n.groupAreaImportedHint
+                        : _points.length < 3
                         ? l10n.groupAreaDrawHint
                         : l10n.groupAreaCornerCount(_points.length),
                     style: const TextStyle(fontSize: 13),
@@ -194,7 +212,68 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
         circleRadius: 5,
       ),
     );
+
+    final area = widget.initialArea;
+    if (area != null) {
+      await _loadExistingArea(area);
+      await _frameToArea(area);
+      return;
+    }
     unawaited(_goToMyLocation(l10n, initial: true));
+  }
+
+  /// Shows the group's current area on open. A hand-drawn area (few corners)
+  /// becomes editable handles; a large imported boundary is shown read-only as
+  /// a backdrop to clear or replace, so thousands of vertices never choke it.
+  Future<void> _loadExistingArea(String area) async {
+    final rings = polygonRings(area);
+    if (rings.isEmpty) return;
+    final ring = rings.first;
+    final open =
+        ring.length > 1 &&
+            ring.first[0] == ring.last[0] &&
+            ring.first[1] == ring.last[1]
+        ? ring.sublist(0, ring.length - 1)
+        : ring;
+    if (open.length > _maxEditableVertices) {
+      setState(() => _readOnlyArea = true);
+      await _controller?.setGeoJsonSource(
+        'aoi-poly',
+        jsonDecode(area) as Map<String, dynamic>,
+      );
+      return;
+    }
+    setState(() {
+      _points
+        ..clear()
+        ..addAll([for (final p in open) LatLng(p[1], p[0])]);
+    });
+    await _redraw();
+  }
+
+  Future<void> _frameToArea(String area) async {
+    final bounds = aoiBounds(area);
+    if (bounds == null) return;
+    await _controller?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(bounds[1], bounds[0]),
+          northeast: LatLng(bounds[3], bounds[2]),
+        ),
+        left: 40,
+        right: 40,
+        top: 80,
+        bottom: 160,
+      ),
+    );
+  }
+
+  void _clear() {
+    setState(() {
+      _points.clear();
+      _readOnlyArea = false;
+    });
+    unawaited(_redraw());
   }
 
   /// Centers the map on the device's location. On open it only nudges the
@@ -262,6 +341,7 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
   }
 
   Future<void> _onTap(Point<double> point, LatLng latLng) async {
+    if (_readOnlyArea) return;
     setState(() => _points.add(latLng));
     await _redraw();
   }

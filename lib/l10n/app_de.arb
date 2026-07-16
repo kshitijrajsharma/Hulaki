@@ -245,6 +245,7 @@
   "groupUndo": "Rückgängig",
   "groupSearchPlaceHint": "Ort suchen",
   "groupAreaDrawHint": "Tippe auf die Karte, um mindestens 3 Ecken zu setzen.",
+  "groupAreaImportedHint": "Importiertes Gebiet angezeigt. Leeren, um ein neues zu zeichnen, oder einen Ersatz hochladen.",
   "groupAreaCornerCount": "{count, plural, =1{1 Ecke. Tippe, um mehr hinzuzufügen.} other{{count} Ecken. Tippe, um mehr hinzuzufügen.}}",
   "groupUseThisArea": "Dieses Gebiet verwenden",
   "groupLocationUnavailable": "Dein Standort konnte nicht ermittelt werden",
@@ -401,7 +402,6 @@
   "zoneClear": "Aufteilung löschen",
   "zoneClearDetail": "Zurück zu einem Gebiet. Die Kartierungsgrenze bleibt.",
   "zoneClearConfirm": "Aufteilung löschen? Zonen und Zuweisungen werden entfernt. Das Kartierungsgebiet bleibt.",
-  "zoneRename": "Umbenennen",
   "zoneRenameTitle": "Zonenname",
   "zoneHowMany": "Wie viele Zonen?",
   "zoneSeedTitle": "Tippe, wo Teams starten",
@@ -417,5 +417,6 @@
   "groupAreaBoundary": "Grenze",
   "groupAreaBoundaryDetail": "Das Erhebungsgebiet zeichnen oder neu zeichnen",
   "zoneCoverageEntryDetail": "Punkte und Kartierer pro Zone",
-  "zoneCoverageExplain": "Punkte und wer jede Zone kartiert. Die Karte zeigt, welche welche ist."
+  "zoneCoverageExplain": "Punkte und wer jede Zone kartiert. Die Karte zeigt, welche welche ist.",
+  "groupClearArea": "Löschen"
 }

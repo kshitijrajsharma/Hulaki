@@ -25,6 +25,37 @@ class ZoneCoverageScreen extends ConsumerStatefulWidget {
 class _ZoneCoverageScreenState extends ConsumerState<ZoneCoverageScreen> {
   String? _selectedZoneId;
 
+  Future<void> _rename(String zoneId, String currentName) async {
+    final l10n = AppLocalizations.of(context);
+    final controller = TextEditingController(text: currentName);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.zoneRenameTitle),
+        content: TextField(controller: controller, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.threadCancel),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: Text(l10n.threadSave),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty) return;
+    final all =
+        ref.read(zonesProvider(widget.groupId)).asData?.value ?? const [];
+    final updated = [
+      for (final zone in all)
+        if (zone.id == zoneId) zone.copyWith(name: name) else zone,
+    ];
+    await ref.read(groupServiceProvider).setZones(widget.groupId, updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -46,6 +77,7 @@ class _ZoneCoverageScreenState extends ConsumerState<ZoneCoverageScreen> {
       ..sort((a, b) => (counts[b.id] ?? 0).compareTo(counts[a.id] ?? 0));
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(title: Text(l10n.zoneCoverageTitle)),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -89,6 +121,7 @@ class _ZoneCoverageScreenState extends ConsumerState<ZoneCoverageScreen> {
                           ? null
                           : zone.id,
                     ),
+                    onRename: () => unawaited(_rename(zone.id, zone.name)),
                   ),
               ],
             ),
@@ -261,6 +294,7 @@ class _CoverageRow extends StatelessWidget {
     required this.mappers,
     required this.expanded,
     required this.onTap,
+    required this.onRename,
   });
 
   final String name;
@@ -269,6 +303,7 @@ class _CoverageRow extends StatelessWidget {
   final List<String> mappers;
   final bool expanded;
   final VoidCallback onTap;
+  final VoidCallback onRename;
 
   /// Two names then a count when collapsed; the whole team when expanded.
   String _mappersLabel(AppLocalizations l10n) {
@@ -293,7 +328,24 @@ class _CoverageRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
         ),
       ),
-      title: Text(name, style: theme.titleMedium),
+      title: Row(
+        children: [
+          Flexible(child: Text(name, style: theme.titleMedium)),
+          const SizedBox(width: 2),
+          InkWell(
+            onTap: onRename,
+            borderRadius: BorderRadius.circular(99),
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(
+                Icons.edit_outlined,
+                size: 16,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+        ],
+      ),
       subtitle: Text(
         _mappersLabel(l10n),
         maxLines: expanded ? null : 1,

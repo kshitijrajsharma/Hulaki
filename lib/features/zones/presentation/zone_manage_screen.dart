@@ -153,40 +153,6 @@ class ZoneManageScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _rename(
-    BuildContext context,
-    WidgetRef ref,
-    List<Zone> zones,
-    Zone zone,
-    AppLocalizations l10n,
-  ) async {
-    final controller = TextEditingController(text: zone.name);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.zoneRenameTitle),
-        content: TextField(controller: controller, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.threadCancel),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: Text(l10n.threadSave),
-          ),
-        ],
-      ),
-    );
-    if (name == null || name.isEmpty) return;
-    final updated = [
-      for (final z in zones)
-        if (z.id == zone.id) z.copyWith(name: name) else z,
-    ];
-    await ref.read(groupServiceProvider).setZones(groupId, updated);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
@@ -204,20 +170,6 @@ class ZoneManageScreen extends ConsumerWidget {
               children: [
                 Text(l10n.zoneManageSubtitle, style: theme(context).bodyMedium),
                 const SizedBox(height: 16),
-                if (zones.isNotEmpty) ...[
-                  for (final zone in zones)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: _Swatch(zone.colorValue),
-                      title: Text(zone.name),
-                      trailing: TextButton(
-                        onPressed: () =>
-                            unawaited(_rename(context, ref, zones, zone, l10n)),
-                        child: Text(l10n.zoneRename),
-                      ),
-                    ),
-                  const Divider(height: 24),
-                ],
                 _Action(
                   icon: Icons.grid_view_outlined,
                   title: l10n.zoneSplitEvenly,
@@ -278,22 +230,6 @@ class _Action extends StatelessWidget {
       onTap: onTap,
     );
   }
-}
-
-class _Swatch extends StatelessWidget {
-  const _Swatch(this.colorValue);
-
-  final int colorValue;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 16,
-    height: 16,
-    decoration: BoxDecoration(
-      color: Color(colorValue),
-      borderRadius: BorderRadius.circular(5),
-    ),
-  );
 }
 
 class _Message extends StatelessWidget {

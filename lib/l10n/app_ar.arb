@@ -245,6 +245,7 @@
   "groupUndo": "تراجع",
   "groupSearchPlaceHint": "ابحث عن مكان",
   "groupAreaDrawHint": "اضغط على الخريطة لوضع 3 زوايا على الأقل.",
+  "groupAreaImportedHint": "منطقة مستوردة معروضة. امسحها لرسم واحدة جديدة أو ارفع بديلاً.",
   "groupAreaCornerCount": "{count, plural, =1{زاوية واحدة. اضغط لإضافة المزيد.} other{{count} زوايا. اضغط لإضافة المزيد.}}",
   "groupUseThisArea": "استخدام هذه المنطقة",
   "groupLocationUnavailable": "تعذّر الحصول على موقعك",
@@ -401,7 +402,6 @@
   "zoneClear": "مسح التقسيم",
   "zoneClearDetail": "العودة إلى منطقة واحدة. تبقى حدود رسم الخرائط.",
   "zoneClearConfirm": "مسح التقسيم؟ تُزال المناطق والتعيينات. تبقى منطقة رسم الخرائط.",
-  "zoneRename": "إعادة تسمية",
   "zoneRenameTitle": "اسم المنطقة",
   "zoneHowMany": "كم عدد المناطق؟",
   "zoneSeedTitle": "انقر حيث تبدأ الفرق",
@@ -417,5 +417,6 @@
   "groupAreaBoundary": "الحدود",
   "groupAreaBoundaryDetail": "ارسم منطقة المسح أو أعد رسمها",
   "zoneCoverageEntryDetail": "النقاط والراسمون لكل منطقة",
-  "zoneCoverageExplain": "النقاط ومن يرسم كل منطقة. تُظهر الخريطة أيها أي."
+  "zoneCoverageExplain": "النقاط ومن يرسم كل منطقة. تُظهر الخريطة أيها أي.",
+  "groupClearArea": "مسح"
 }

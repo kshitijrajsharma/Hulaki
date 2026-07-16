@@ -304,8 +304,13 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
   /// Draws or replaces the group's mapping area after creation, then keeps the
   /// public listing current.
   Future<void> _editMappingArea(String groupId) async {
+    final area =
+        (await ref.read(databaseProvider).groupById(groupId))?.aoiGeoJson;
+    if (!mounted) return;
     final geoJson = await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(builder: (_) => const AreaDrawScreen()),
+      MaterialPageRoute<String>(
+        builder: (_) => AreaDrawScreen(initialArea: area),
+      ),
     );
     if (geoJson == null) return;
     await _guard(() async {

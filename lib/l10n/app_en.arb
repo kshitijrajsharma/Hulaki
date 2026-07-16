@@ -549,10 +549,6 @@
   "@zoneClearConfirm": {
     "description": "Confirmation body for clearing the split"
   },
-  "zoneRename": "Rename",
-  "@zoneRename": {
-    "description": "Action to rename a zone"
-  },
   "zoneRenameTitle": "Zone name",
   "@zoneRenameTitle": {
     "description": "Title of the rename-zone dialog"
@@ -1300,6 +1296,10 @@
   "@groupUndo": {
     "description": "Button that removes the last drawn corner of the mapping area"
   },
+  "groupClearArea": "Clear",
+  "@groupClearArea": {
+    "description": "Button that removes all drawn corners to redraw the area"
+  },
   "groupSearchPlaceHint": "Search a place",
   "@groupSearchPlaceHint": {
     "description": "Placeholder text in the place search field on the area drawing map"
@@ -1307,6 +1307,10 @@
   "groupAreaDrawHint": "Tap the map to drop at least 3 corners.",
   "@groupAreaDrawHint": {
     "description": "Hint shown while the drawn area has fewer than three corners"
+  },
+  "groupAreaImportedHint": "Imported area shown. Clear to draw a new one, or upload a replacement.",
+  "@groupAreaImportedHint": {
+    "description": "Hint shown when a large imported boundary opens read-only"
   },
   "groupAreaCornerCount": "{count, plural, =1{1 corner. Tap to add more.} other{{count} corners. Tap to add more.}}",
   "@groupAreaCornerCount": {

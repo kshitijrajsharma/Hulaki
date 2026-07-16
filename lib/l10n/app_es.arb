@@ -245,6 +245,7 @@
   "groupUndo": "Deshacer",
   "groupSearchPlaceHint": "Buscar un lugar",
   "groupAreaDrawHint": "Toca el mapa para marcar al menos 3 vértices.",
+  "groupAreaImportedHint": "Área importada mostrada. Bórrala para dibujar una nueva o sube un reemplazo.",
   "groupAreaCornerCount": "{count, plural, =1{1 vértice. Toca para añadir más.} other{{count} vértices. Toca para añadir más.}}",
   "groupUseThisArea": "Usar esta área",
   "groupLocationUnavailable": "No se pudo obtener tu ubicación",
@@ -401,7 +402,6 @@
   "zoneClear": "Borrar la división",
   "zoneClearDetail": "Vuelve a una sola área. El límite de mapeo se mantiene.",
   "zoneClearConfirm": "¿Borrar la división? Se eliminan las zonas y las asignaciones. El área de mapeo se mantiene.",
-  "zoneRename": "Renombrar",
   "zoneRenameTitle": "Nombre de la zona",
   "zoneHowMany": "¿Cuántas zonas?",
   "zoneSeedTitle": "Toca donde empiezan los equipos",
@@ -417,5 +417,6 @@
   "groupAreaBoundary": "Límite",
   "groupAreaBoundaryDetail": "Dibuja o vuelve a dibujar el área de estudio",
   "zoneCoverageEntryDetail": "Puntos y personas por zona",
-  "zoneCoverageExplain": "Puntos y quién mapea cada zona. El mapa muestra cuál es cuál."
+  "zoneCoverageExplain": "Puntos y quién mapea cada zona. El mapa muestra cuál es cuál.",
+  "groupClearArea": "Borrar"
 }
