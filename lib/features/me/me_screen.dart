@@ -37,6 +37,31 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     });
   }
 
+  /// Confirms a saved preference so every change is acknowledged.
+  void _saved() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).commonSaved)),
+      );
+  }
+
+  Future<void> _setUnits(UnitSystem value) async {
+    await ref.read(unitsProvider.notifier).set(value);
+    _saved();
+  }
+
+  Future<void> _setAnonymous({required bool value}) async {
+    await ref.read(appearAnonymousProvider.notifier).set(value: value);
+    _saved();
+  }
+
+  Future<void> _setBackgroundRun({required bool value}) async {
+    await ref.read(backgroundRunProvider.notifier).set(value: value);
+    _saved();
+  }
+
   Future<void> _remove(int id) async {
     await removeCachedRegion(id);
     _reloadAreas();
@@ -123,8 +148,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           _Card(
             child: _UnitsToggle(
               units: units,
-              onChanged: (value) =>
-                  unawaited(ref.read(unitsProvider.notifier).set(value)),
+              onChanged: (value) => unawaited(_setUnits(value)),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -146,9 +170,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               value: ref.watch(appearAnonymousProvider),
-              onChanged: (value) => unawaited(
-                ref.read(appearAnonymousProvider.notifier).set(value: value),
-              ),
+              onChanged: (value) => unawaited(_setAnonymous(value: value)),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -166,9 +188,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 style: Theme.of(context).textTheme.labelSmall,
               ),
               value: ref.watch(backgroundRunProvider),
-              onChanged: (value) => unawaited(
-                ref.read(backgroundRunProvider.notifier).set(value: value),
-              ),
+              onChanged: (value) => unawaited(_setBackgroundRun(value: value)),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),

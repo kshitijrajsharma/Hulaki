@@ -26,6 +26,10 @@ class ShareWebSheet extends ConsumerStatefulWidget {
 class _ShareWebSheetState extends ConsumerState<ShareWebSheet> {
   bool _busy = false;
 
+  /// Set when a refresh fails, shown inline since a snackbar would sit behind
+  /// this sheet. Cleared on the next successful refresh.
+  String? _updateError;
+
   Future<void> _create() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -42,6 +46,18 @@ class _ShareWebSheetState extends ConsumerState<ShareWebSheet> {
 
   Future<void> _revoke(String id) =>
       ref.read(snapshotPublisherProvider).revoke(id);
+
+  Future<void> _update(WebSnapshot snapshot) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(snapshotPublisherProvider)
+          .update(snapshot, now: DateTime.now());
+      if (mounted) setState(() => _updateError = null);
+    } on Exception {
+      if (mounted) setState(() => _updateError = l10n.shareWebUpdateFailed);
+    }
+  }
 
   void _toast(String message) {
     ScaffoldMessenger.of(context)
@@ -92,8 +108,19 @@ class _ShareWebSheetState extends ConsumerState<ShareWebSheet> {
             loading: _busy,
             onPressed: _busy ? null : _create,
           ),
+          if (_updateError != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              _updateError!,
+              style: const TextStyle(fontSize: 13, color: AppColors.danger),
+            ),
+          ],
           const SizedBox(height: AppSpacing.lg),
-          _ActiveLinks(groupId: widget.group.id, onRevoke: _revoke),
+          _ActiveLinks(
+            groupId: widget.group.id,
+            onRevoke: _revoke,
+            onUpdate: _update,
+          ),
         ],
       ),
     );
@@ -101,10 +128,15 @@ class _ShareWebSheetState extends ConsumerState<ShareWebSheet> {
 }
 
 class _ActiveLinks extends ConsumerWidget {
-  const _ActiveLinks({required this.groupId, required this.onRevoke});
+  const _ActiveLinks({
+    required this.groupId,
+    required this.onRevoke,
+    required this.onUpdate,
+  });
 
   final String groupId;
   final Future<void> Function(String id) onRevoke;
+  final Future<void> Function(WebSnapshot snapshot) onUpdate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -137,7 +169,11 @@ class _ActiveLinks extends ConsumerWidget {
               )
             else
               for (final link in links)
-                _LinkRow(link: link, onRevoke: () => onRevoke(link.id)),
+                _LinkRow(
+                  link: link,
+                  onRevoke: () => onRevoke(link.id),
+                  onUpdate: () => onUpdate(link),
+                ),
           ],
         );
       },
@@ -146,14 +182,19 @@ class _ActiveLinks extends ConsumerWidget {
 }
 
 class _LinkRow extends StatelessWidget {
-  const _LinkRow({required this.link, required this.onRevoke});
+  const _LinkRow({
+    required this.link,
+    required this.onRevoke,
+    required this.onUpdate,
+  });
 
   final WebSnapshot link;
   final VoidCallback onRevoke;
+  final Future<void> Function() onUpdate;
 
   String get _date {
     String two(int n) => n.toString().padLeft(2, '0');
-    final d = link.createdAt.toLocal();
+    final d = (link.updatedAt ?? link.createdAt).toLocal();
     return '${d.year}-${two(d.month)}-${two(d.day)} '
         '${two(d.hour)}:${two(d.minute)}';
   }
@@ -179,7 +220,9 @@ class _LinkRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  _date,
+                  link.updatedAt != null
+                      ? '${l10n.shareWebUpdatedLabel} $_date'
+                      : _date,
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textMuted,
@@ -204,6 +247,11 @@ class _LinkRow extends StatelessWidget {
             onPressed: () => unawaited(
               SharePlus.instance.share(ShareParams(text: link.url)),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.sync, size: 18, color: AppColors.ink),
+            tooltip: l10n.shareWebUpdate,
+            onPressed: () => unawaited(onUpdate()),
           ),
           IconButton(
             icon: const Icon(

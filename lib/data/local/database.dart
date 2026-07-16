@@ -222,6 +222,9 @@ class WebSnapshots extends Table {
   TextColumn get url => text()();
   DateTimeColumn get createdAt => dateTime()();
 
+  /// When the link's data was last refreshed in place, null until first update.
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -248,7 +251,7 @@ class LocalDatabase extends _$LocalDatabase {
     : super(executor ?? driftDatabase(name: 'hulaki'));
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -316,6 +319,9 @@ class LocalDatabase extends _$LocalDatabase {
       }
       if (from < 18) {
         await m.addColumn(groups, groups.requireZone);
+      }
+      if (from < 19) {
+        await m.addColumn(webSnapshots, webSnapshots.updatedAt);
       }
     },
   );

@@ -4,6 +4,10 @@
   "@languageName": {
     "description": "This language, written in this language. Shown in the language list on the Me screen."
   },
+  "commonSaved": "Saved",
+  "@commonSaved": {
+    "description": "Generic confirmation shown after a setting or change is saved"
+  },
   "commonContinue": "Continue",
   "@commonContinue": {
     "description": "Primary button label to proceed"
@@ -1921,5 +1925,17 @@
   "shareWebCopied": "Link copied",
   "@shareWebCopied": {
     "description": "Confirmation shown after copying a web link"
+  },
+  "shareWebUpdate": "Update",
+  "@shareWebUpdate": {
+    "description": "Tooltip for refreshing a link's data in place"
+  },
+  "shareWebUpdateFailed": "Couldn't update the link",
+  "@shareWebUpdateFailed": {
+    "description": "Shown when refreshing a web link's data fails"
+  },
+  "shareWebUpdatedLabel": "Updated",
+  "@shareWebUpdatedLabel": {
+    "description": "Prefix on a link's date when its data was refreshed"
   }
 }

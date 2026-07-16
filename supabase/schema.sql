@@ -55,6 +55,32 @@ create policy media_write on storage.objects
 create policy media_delete on storage.objects
   for delete to authenticated using (bucket_id = 'media');
 
+-- Encrypted web snapshots: one small JSON plus one object per photo under
+-- <id>/…. Public read is safe because every object is ciphertext and the
+-- per-link key rides the URL fragment. Insert publishes a link, update
+-- refreshes it in place (same link and key), delete revokes it. Drops precede
+-- the creates so this block can be re-applied over the existing bucket.
+insert into storage.buckets (id, name, public)
+  values ('snapshots', 'snapshots', true)
+  on conflict (id) do nothing;
+
+drop policy if exists "snapshots read" on storage.objects;
+create policy "snapshots read" on storage.objects
+  for select to public using (bucket_id = 'snapshots');
+
+drop policy if exists "snapshots insert" on storage.objects;
+create policy "snapshots insert" on storage.objects
+  for insert to authenticated with check (bucket_id = 'snapshots');
+
+drop policy if exists "snapshots update" on storage.objects;
+create policy "snapshots update" on storage.objects
+  for update to authenticated using (bucket_id = 'snapshots')
+  with check (bucket_id = 'snapshots');
+
+drop policy if exists "snapshots delete" on storage.objects;
+create policy "snapshots delete" on storage.objects
+  for delete to authenticated using (bucket_id = 'snapshots');
+
 -- The public directory: groups their admins chose to make discoverable. This
 -- holds plaintext metadata plus the group key, so anyone nearby can find and
 -- join. Private groups never appear here. The geo index keeps proximity search

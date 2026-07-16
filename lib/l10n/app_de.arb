@@ -1,6 +1,7 @@
 {
   "@@locale": "de",
   "languageName": "Deutsch",
+  "commonSaved": "Gespeichert",
   "commonContinue": "Weiter",
   "commonYou": "Du",
   "navChats": "Chats",
@@ -386,6 +387,9 @@
   "shareWebShare": "Teilen",
   "shareWebRevoke": "Widerrufen",
   "shareWebCopied": "Link kopiert",
+  "shareWebUpdate": "Aktualisieren",
+  "shareWebUpdateFailed": "Link konnte nicht aktualisiert werden",
+  "shareWebUpdatedLabel": "Aktualisiert",
   "threadOutsideZoneTitle": "Außerhalb deiner Zone",
   "threadOutsideZoneBody": "Dieser Punkt liegt außerhalb deiner Zone. Trotzdem hier setzen?",
   "threadPickZoneFirst": "Zuerst eine Zone wählen",

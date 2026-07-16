@@ -1,6 +1,7 @@
 {
   "@@locale": "ar",
   "languageName": "العربية",
+  "commonSaved": "تم الحفظ",
   "commonContinue": "متابعة",
   "commonYou": "أنت",
   "navChats": "المحادثات",
@@ -386,6 +387,9 @@
   "shareWebShare": "مشاركة",
   "shareWebRevoke": "إلغاء",
   "shareWebCopied": "تم نسخ الرابط",
+  "shareWebUpdate": "تحديث",
+  "shareWebUpdateFailed": "تعذّر تحديث الرابط",
+  "shareWebUpdatedLabel": "محدّث",
   "threadOutsideZoneTitle": "خارج منطقتك",
   "threadOutsideZoneBody": "هذه النقطة خارج منطقتك. إسقاطها هنا على أي حال؟",
   "threadPickZoneFirst": "اختر منطقة أولاً",

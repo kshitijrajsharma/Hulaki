@@ -74,6 +74,17 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
     });
   }
 
+  /// Confirms a saved change. Used by the settings that would otherwise apply
+  /// silently, so every edit is acknowledged.
+  void _saved() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).commonSaved)),
+      );
+  }
+
   Future<void> _editPhoto() async {
     final file = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -87,6 +98,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
           .read(groupServiceProvider)
           .updateGroupPhoto(widget.groupId, bytes);
       _reload();
+      _saved();
     });
   }
 
@@ -133,6 +145,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
     await ref.read(groupServiceProvider).setJoinApproval(groupId, value: value);
     await refreshPublicListing(ref, groupId);
     _reload();
+    _saved();
   });
 
   Future<void> _setAllowMemberExport(String groupId, bool value) =>
@@ -141,6 +154,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
             .read(groupServiceProvider)
             .setAllowMemberExport(groupId, value: value);
         _reload();
+        _saved();
       });
 
   Future<void> _setAllowMemberPlace(String groupId, bool value) =>
@@ -149,6 +163,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
             .read(groupServiceProvider)
             .setAllowMemberPlace(groupId, value: value);
         _reload();
+        _saved();
       });
 
   Future<void> _setAllowOutsideArea(String groupId, bool value) =>
@@ -157,6 +172,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
             .read(groupServiceProvider)
             .setAllowOutsideArea(groupId, value: value);
         _reload();
+        _saved();
       });
 
   Future<void> _setAllowMemberTags(String groupId, bool value) =>
@@ -165,6 +181,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
             .read(groupServiceProvider)
             .setAllowMemberTags(groupId, value: value);
         _reload();
+        _saved();
       });
 
   Future<void> _setAllowChatMode(String groupId, bool value) =>
@@ -173,11 +190,13 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
             .read(groupServiceProvider)
             .setAllowChatMode(groupId, value: value);
         _reload();
+        _saved();
       });
 
   Future<void> _setRequireZone(String groupId, bool value) => _guard(() async {
     await ref.read(groupServiceProvider).setRequireZone(groupId, value: value);
     _reload();
+    _saved();
   });
 
   /// Picks the accuracy cap for sent points. Off clears it; the presets bound
@@ -214,6 +233,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
           .read(groupServiceProvider)
           .setGpsLimit(groupId, chosen == 0 ? null : chosen);
       _reload();
+      _saved();
     });
   }
 
@@ -240,6 +260,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
       await service.setReach(groupId, isPublic: false);
       await directory.remove(groupId);
       _reload();
+      _saved();
       return;
     }
     // Nearby needs a locatable centre; Everyone lists with no location.
@@ -259,6 +280,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
     final updated = await db.groupById(groupId);
     if (updated != null) await publishGroupListing(ref, updated, center);
     _reload();
+    _saved();
   });
 
   /// The group's map centre: the area's midpoint, else the average of its
@@ -303,6 +325,7 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
       }
       await refreshPublicListing(ref, group.id);
       _reload();
+      _saved();
     });
   }
 

@@ -153,4 +153,49 @@ void main() {
     expect(await publisher.snapshotsFor('g1'), isEmpty);
     expect(store.count, 0);
   });
+
+  test('update refreshes the same link in place with the same key', () async {
+    await _seed(db);
+    final store = InMemorySnapshotStore();
+    final publisher = SnapshotPublisher(db, store);
+    final group = await (db.select(
+      db.groups,
+    )..where((g) => g.id.equals('g1'))).getSingle();
+
+    final url = await publisher.publish(group, now: DateTime.utc(2026, 7, 14));
+    final snapshot = (await publisher.snapshotsFor('g1')).single;
+
+    // A new point lands after the link was published.
+    await db
+        .into(db.messages)
+        .insert(
+          MessagesCompanion.insert(
+            id: 'msg3',
+            groupId: 'g1',
+            senderId: 'u1',
+            kind: 'text',
+            tagId: const Value('t1'),
+            lat: const Value(27.72),
+            lng: const Value(85.32),
+            createdAt: DateTime.utc(2026, 7, 15, 9),
+          ),
+        );
+
+    await publisher.update(snapshot, now: DateTime.utc(2026, 7, 16));
+
+    // Same link and id, only newer.
+    final refreshed = (await publisher.snapshotsFor('g1')).single;
+    expect(refreshed.id, snapshot.id);
+    expect(refreshed.url, url);
+    expect(refreshed.updatedAt?.toUtc(), DateTime.utc(2026, 7, 16));
+
+    // The original fragment key still decrypts, now showing the new point.
+    final key = base64Url.decode(base64.normalize(url.split('#').last));
+    final clear = await GroupCipher.decryptJson(
+      store.read('${snapshot.id}/data')!,
+      Uint8List.fromList(key),
+    );
+    final features = (clear['geojson'] as Map)['features'] as List;
+    expect(features, hasLength(3));
+  });
 }

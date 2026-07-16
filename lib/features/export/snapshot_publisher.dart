@@ -28,6 +28,46 @@ class SnapshotPublisher {
   /// Builds, encrypts, and uploads a snapshot and records it locally. Returns
   /// the shareable link, with the key in its fragment.
   Future<String> publish(Group group, {required DateTime now}) async {
+    final key = await GroupCipher.generateKey();
+    final id = const Uuid().v4();
+    await _buildAndUpload(group, id, key, now);
+
+    final url = '$_viewerBase?s=$id#${_fragmentKey(key)}';
+    await _db
+        .into(_db.webSnapshots)
+        .insert(
+          WebSnapshotsCompanion.insert(
+            id: id,
+            groupId: group.id,
+            url: url,
+            createdAt: now,
+          ),
+        );
+    return url;
+  }
+
+  /// Refreshes an existing link in place: rebuilds the group's current data,
+  /// re-encrypts it with the link's own key, and overwrites the stored objects
+  /// so the same URL serves the latest snapshot.
+  Future<void> update(WebSnapshot snapshot, {required DateTime now}) async {
+    final group = await _db.groupById(snapshot.groupId);
+    if (group == null) return;
+    await _buildAndUpload(group, snapshot.id, _keyFromUrl(snapshot.url), now);
+    await (_db.update(
+      _db.webSnapshots,
+    )..where((s) => s.id.equals(snapshot.id))).write(
+      WebSnapshotsCompanion(updatedAt: Value(now)),
+    );
+  }
+
+  /// Rebuilds the group's snapshot and uploads it under [id], encrypted with
+  /// [key]. Overwrites any existing objects at those paths.
+  Future<void> _buildAndUpload(
+    Group group,
+    String id,
+    Uint8List key,
+    DateTime now,
+  ) async {
     final messages = await _db.messagesFor(group.id);
     final hotKeys = await _db.hotKeysFor(group.id);
 
@@ -48,27 +88,21 @@ class SnapshotPublisher {
       generatedAt: now,
     );
 
-    final key = await GroupCipher.generateKey();
-    final id = const Uuid().v4();
-
     await _store.put(
       '$id/data',
       await GroupCipher.encryptBytes(snapshotToBytes(snapshot.data), key),
     );
     await _uploadPhotos(id, snapshot.photos, key);
+  }
 
-    final url = '$_viewerBase?s=$id#${_fragmentKey(key)}';
-    await _db
-        .into(_db.webSnapshots)
-        .insert(
-          WebSnapshotsCompanion.insert(
-            id: id,
-            groupId: group.id,
-            url: url,
-            createdAt: now,
-          ),
-        );
-    return url;
+  /// Recovers a link's encryption key from the base64url in its URL fragment.
+  Uint8List _keyFromUrl(String url) {
+    final fragment = Uri.parse(url).fragment;
+    final padded = fragment.padRight(
+      fragment.length + (4 - fragment.length % 4) % 4,
+      '=',
+    );
+    return base64Url.decode(padded);
   }
 
   Future<void> _uploadPhotos(

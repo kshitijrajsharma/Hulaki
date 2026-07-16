@@ -5728,8 +5728,25 @@ class $WebSnapshotsTable extends WebSnapshots
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, groupId, url, createdAt];
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    groupId,
+    url,
+    createdAt,
+    updatedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5771,6 +5788,12 @@ class $WebSnapshotsTable extends WebSnapshots
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -5796,6 +5819,10 @@ class $WebSnapshotsTable extends WebSnapshots
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      ),
     );
   }
 
@@ -5810,11 +5837,15 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
   final String groupId;
   final String url;
   final DateTime createdAt;
+
+  /// When the link's data was last refreshed in place, null until first update.
+  final DateTime? updatedAt;
   const WebSnapshot({
     required this.id,
     required this.groupId,
     required this.url,
     required this.createdAt,
+    this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5823,6 +5854,9 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
     map['group_id'] = Variable<String>(groupId);
     map['url'] = Variable<String>(url);
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
     return map;
   }
 
@@ -5832,6 +5866,9 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
       groupId: Value(groupId),
       url: Value(url),
       createdAt: Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
     );
   }
 
@@ -5845,6 +5882,7 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
       groupId: serializer.fromJson<String>(json['groupId']),
       url: serializer.fromJson<String>(json['url']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
   }
   @override
@@ -5855,6 +5893,7 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
       'groupId': serializer.toJson<String>(groupId),
       'url': serializer.toJson<String>(url),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
   }
 
@@ -5863,11 +5902,13 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
     String? groupId,
     String? url,
     DateTime? createdAt,
+    Value<DateTime?> updatedAt = const Value.absent(),
   }) => WebSnapshot(
     id: id ?? this.id,
     groupId: groupId ?? this.groupId,
     url: url ?? this.url,
     createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
   WebSnapshot copyWithCompanion(WebSnapshotsCompanion data) {
     return WebSnapshot(
@@ -5875,6 +5916,7 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
       groupId: data.groupId.present ? data.groupId.value : this.groupId,
       url: data.url.present ? data.url.value : this.url,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
@@ -5884,13 +5926,14 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
           ..write('id: $id, ')
           ..write('groupId: $groupId, ')
           ..write('url: $url, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, groupId, url, createdAt);
+  int get hashCode => Object.hash(id, groupId, url, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5898,7 +5941,8 @@ class WebSnapshot extends DataClass implements Insertable<WebSnapshot> {
           other.id == this.id &&
           other.groupId == this.groupId &&
           other.url == this.url &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
 }
 
 class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
@@ -5906,12 +5950,14 @@ class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
   final Value<String> groupId;
   final Value<String> url;
   final Value<DateTime> createdAt;
+  final Value<DateTime?> updatedAt;
   final Value<int> rowid;
   const WebSnapshotsCompanion({
     this.id = const Value.absent(),
     this.groupId = const Value.absent(),
     this.url = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   WebSnapshotsCompanion.insert({
@@ -5919,6 +5965,7 @@ class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
     required String groupId,
     required String url,
     required DateTime createdAt,
+    this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        groupId = Value(groupId),
@@ -5929,6 +5976,7 @@ class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
     Expression<String>? groupId,
     Expression<String>? url,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5936,6 +5984,7 @@ class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
       if (groupId != null) 'group_id': groupId,
       if (url != null) 'url': url,
       if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5945,6 +5994,7 @@ class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
     Value<String>? groupId,
     Value<String>? url,
     Value<DateTime>? createdAt,
+    Value<DateTime?>? updatedAt,
     Value<int>? rowid,
   }) {
     return WebSnapshotsCompanion(
@@ -5952,6 +6002,7 @@ class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
       groupId: groupId ?? this.groupId,
       url: url ?? this.url,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5971,6 +6022,9 @@ class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5984,6 +6038,7 @@ class WebSnapshotsCompanion extends UpdateCompanion<WebSnapshot> {
           ..write('groupId: $groupId, ')
           ..write('url: $url, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9669,6 +9724,7 @@ typedef $$WebSnapshotsTableCreateCompanionBuilder =
       required String groupId,
       required String url,
       required DateTime createdAt,
+      Value<DateTime?> updatedAt,
       Value<int> rowid,
     });
 typedef $$WebSnapshotsTableUpdateCompanionBuilder =
@@ -9677,6 +9733,7 @@ typedef $$WebSnapshotsTableUpdateCompanionBuilder =
       Value<String> groupId,
       Value<String> url,
       Value<DateTime> createdAt,
+      Value<DateTime?> updatedAt,
       Value<int> rowid,
     });
 
@@ -9706,6 +9763,11 @@ class $$WebSnapshotsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -9738,6 +9800,11 @@ class $$WebSnapshotsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$WebSnapshotsTableAnnotationComposer
@@ -9760,6 +9827,9 @@ class $$WebSnapshotsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
 class $$WebSnapshotsTableTableManager
@@ -9797,12 +9867,14 @@ class $$WebSnapshotsTableTableManager
                 Value<String> groupId = const Value.absent(),
                 Value<String> url = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WebSnapshotsCompanion(
                 id: id,
                 groupId: groupId,
                 url: url,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9811,12 +9883,14 @@ class $$WebSnapshotsTableTableManager
                 required String groupId,
                 required String url,
                 required DateTime createdAt,
+                Value<DateTime?> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WebSnapshotsCompanion.insert(
                 id: id,
                 groupId: groupId,
                 url: url,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

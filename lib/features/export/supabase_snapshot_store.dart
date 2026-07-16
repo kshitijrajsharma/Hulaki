@@ -21,6 +21,8 @@ class SupabaseSnapshotStore implements SnapshotStore {
           fileOptions: const FileOptions(
             upsert: true,
             contentType: 'application/octet-stream',
+            // Short cache so an updated snapshot is served promptly on reload.
+            cacheControl: '60',
           ),
         );
   }

@@ -1,6 +1,7 @@
 {
   "@@locale": "pt",
   "languageName": "Português",
+  "commonSaved": "Salvo",
   "commonContinue": "Continuar",
   "commonYou": "Você",
   "navChats": "Conversas",
@@ -386,6 +387,9 @@
   "shareWebShare": "Compartilhar",
   "shareWebRevoke": "Revogar",
   "shareWebCopied": "Link copiado",
+  "shareWebUpdate": "Atualizar",
+  "shareWebUpdateFailed": "Não foi possível atualizar o link",
+  "shareWebUpdatedLabel": "Atualizado",
   "threadOutsideZoneTitle": "Fora da sua zona",
   "threadOutsideZoneBody": "Este ponto está fora da sua zona. Soltar aqui mesmo assim?",
   "threadPickZoneFirst": "Escolha uma zona primeiro",
