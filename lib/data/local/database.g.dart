@@ -651,6 +651,21 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _requireZoneMeta = const VerificationMeta(
+    'requireZone',
+  );
+  @override
+  late final GeneratedColumn<bool> requireZone = GeneratedColumn<bool>(
+    'require_zone',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("require_zone" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _photoMeta = const VerificationMeta('photo');
   @override
   late final GeneratedColumn<Uint8List> photo = GeneratedColumn<Uint8List>(
@@ -725,6 +740,7 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     gpsLimitM,
     allowMemberTags,
     allowChatMode,
+    requireZone,
     photo,
     photoBlobId,
     photoKey,
@@ -886,6 +902,15 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         ),
       );
     }
+    if (data.containsKey('require_zone')) {
+      context.handle(
+        _requireZoneMeta,
+        requireZone.isAcceptableOrUnknown(
+          data['require_zone']!,
+          _requireZoneMeta,
+        ),
+      );
+    }
     if (data.containsKey('photo')) {
       context.handle(
         _photoMeta,
@@ -1000,6 +1025,10 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         DriftSqlType.bool,
         data['${effectivePrefix}allow_chat_mode'],
       )!,
+      requireZone: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}require_zone'],
+      )!,
       photo: attachedDatabase.typeMapping.read(
         DriftSqlType.blob,
         data['${effectivePrefix}photo'],
@@ -1037,11 +1066,8 @@ class Group extends DataClass implements Insertable<Group> {
   final String encKey;
   final String? aoiGeoJson;
 
-  /// Optional subdivision of the mapping area into named zones, set by an admin
-  /// and shared through group-meta. A GeoJSON FeatureCollection, one Feature per
-  /// zone. Null means the area is not split; the app behaves as if zones do not
-  /// exist. [aoiGeoJson] stays the outer boundary, so clearing the split is just
-  /// nulling this column.
+  /// Optional zone split (a GeoJSON FeatureCollection) shared through
+  /// group-meta. Null means unsplit; clearing the split is nulling this.
   final String? zonesGeoJson;
   final bool isPublic;
   final bool joinApproval;
@@ -1069,6 +1095,10 @@ class Group extends DataClass implements Insertable<Group> {
   /// When true, members may switch a thread into chat mode: plain messages with
   /// no tag and no location, for coordinating without dropping points.
   final bool allowChatMode;
+
+  /// When true and zones are defined, every mapper must select a zone before
+  /// dropping points, so coverage is never left unassigned.
+  final bool requireZone;
   final Uint8List? photo;
 
   /// The cover photo shared with members: its encrypted blob id in object
@@ -1097,6 +1127,7 @@ class Group extends DataClass implements Insertable<Group> {
     this.gpsLimitM,
     required this.allowMemberTags,
     required this.allowChatMode,
+    required this.requireZone,
     this.photo,
     this.photoBlobId,
     this.photoKey,
@@ -1134,6 +1165,7 @@ class Group extends DataClass implements Insertable<Group> {
     }
     map['allow_member_tags'] = Variable<bool>(allowMemberTags);
     map['allow_chat_mode'] = Variable<bool>(allowChatMode);
+    map['require_zone'] = Variable<bool>(requireZone);
     if (!nullToAbsent || photo != null) {
       map['photo'] = Variable<Uint8List>(photo);
     }
@@ -1180,6 +1212,7 @@ class Group extends DataClass implements Insertable<Group> {
           : Value(gpsLimitM),
       allowMemberTags: Value(allowMemberTags),
       allowChatMode: Value(allowChatMode),
+      requireZone: Value(requireZone),
       photo: photo == null && nullToAbsent
           ? const Value.absent()
           : Value(photo),
@@ -1220,6 +1253,7 @@ class Group extends DataClass implements Insertable<Group> {
       gpsLimitM: serializer.fromJson<int?>(json['gpsLimitM']),
       allowMemberTags: serializer.fromJson<bool>(json['allowMemberTags']),
       allowChatMode: serializer.fromJson<bool>(json['allowChatMode']),
+      requireZone: serializer.fromJson<bool>(json['requireZone']),
       photo: serializer.fromJson<Uint8List?>(json['photo']),
       photoBlobId: serializer.fromJson<String?>(json['photoBlobId']),
       photoKey: serializer.fromJson<String?>(json['photoKey']),
@@ -1249,6 +1283,7 @@ class Group extends DataClass implements Insertable<Group> {
       'gpsLimitM': serializer.toJson<int?>(gpsLimitM),
       'allowMemberTags': serializer.toJson<bool>(allowMemberTags),
       'allowChatMode': serializer.toJson<bool>(allowChatMode),
+      'requireZone': serializer.toJson<bool>(requireZone),
       'photo': serializer.toJson<Uint8List?>(photo),
       'photoBlobId': serializer.toJson<String?>(photoBlobId),
       'photoKey': serializer.toJson<String?>(photoKey),
@@ -1276,6 +1311,7 @@ class Group extends DataClass implements Insertable<Group> {
     Value<int?> gpsLimitM = const Value.absent(),
     bool? allowMemberTags,
     bool? allowChatMode,
+    bool? requireZone,
     Value<Uint8List?> photo = const Value.absent(),
     Value<String?> photoBlobId = const Value.absent(),
     Value<String?> photoKey = const Value.absent(),
@@ -1300,6 +1336,7 @@ class Group extends DataClass implements Insertable<Group> {
     gpsLimitM: gpsLimitM.present ? gpsLimitM.value : this.gpsLimitM,
     allowMemberTags: allowMemberTags ?? this.allowMemberTags,
     allowChatMode: allowChatMode ?? this.allowChatMode,
+    requireZone: requireZone ?? this.requireZone,
     photo: photo.present ? photo.value : this.photo,
     photoBlobId: photoBlobId.present ? photoBlobId.value : this.photoBlobId,
     photoKey: photoKey.present ? photoKey.value : this.photoKey,
@@ -1346,6 +1383,9 @@ class Group extends DataClass implements Insertable<Group> {
       allowChatMode: data.allowChatMode.present
           ? data.allowChatMode.value
           : this.allowChatMode,
+      requireZone: data.requireZone.present
+          ? data.requireZone.value
+          : this.requireZone,
       photo: data.photo.present ? data.photo.value : this.photo,
       photoBlobId: data.photoBlobId.present
           ? data.photoBlobId.value
@@ -1379,6 +1419,7 @@ class Group extends DataClass implements Insertable<Group> {
           ..write('gpsLimitM: $gpsLimitM, ')
           ..write('allowMemberTags: $allowMemberTags, ')
           ..write('allowChatMode: $allowChatMode, ')
+          ..write('requireZone: $requireZone, ')
           ..write('photo: $photo, ')
           ..write('photoBlobId: $photoBlobId, ')
           ..write('photoKey: $photoKey, ')
@@ -1408,6 +1449,7 @@ class Group extends DataClass implements Insertable<Group> {
     gpsLimitM,
     allowMemberTags,
     allowChatMode,
+    requireZone,
     $driftBlobEquality.hash(photo),
     photoBlobId,
     photoKey,
@@ -1436,6 +1478,7 @@ class Group extends DataClass implements Insertable<Group> {
           other.gpsLimitM == this.gpsLimitM &&
           other.allowMemberTags == this.allowMemberTags &&
           other.allowChatMode == this.allowChatMode &&
+          other.requireZone == this.requireZone &&
           $driftBlobEquality.equals(other.photo, this.photo) &&
           other.photoBlobId == this.photoBlobId &&
           other.photoKey == this.photoKey &&
@@ -1462,6 +1505,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
   final Value<int?> gpsLimitM;
   final Value<bool> allowMemberTags;
   final Value<bool> allowChatMode;
+  final Value<bool> requireZone;
   final Value<Uint8List?> photo;
   final Value<String?> photoBlobId;
   final Value<String?> photoKey;
@@ -1487,6 +1531,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.gpsLimitM = const Value.absent(),
     this.allowMemberTags = const Value.absent(),
     this.allowChatMode = const Value.absent(),
+    this.requireZone = const Value.absent(),
     this.photo = const Value.absent(),
     this.photoBlobId = const Value.absent(),
     this.photoKey = const Value.absent(),
@@ -1513,6 +1558,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.gpsLimitM = const Value.absent(),
     this.allowMemberTags = const Value.absent(),
     this.allowChatMode = const Value.absent(),
+    this.requireZone = const Value.absent(),
     this.photo = const Value.absent(),
     this.photoBlobId = const Value.absent(),
     this.photoKey = const Value.absent(),
@@ -1542,6 +1588,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Expression<int>? gpsLimitM,
     Expression<bool>? allowMemberTags,
     Expression<bool>? allowChatMode,
+    Expression<bool>? requireZone,
     Expression<Uint8List>? photo,
     Expression<String>? photoBlobId,
     Expression<String>? photoKey,
@@ -1568,6 +1615,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       if (gpsLimitM != null) 'gps_limit_m': gpsLimitM,
       if (allowMemberTags != null) 'allow_member_tags': allowMemberTags,
       if (allowChatMode != null) 'allow_chat_mode': allowChatMode,
+      if (requireZone != null) 'require_zone': requireZone,
       if (photo != null) 'photo': photo,
       if (photoBlobId != null) 'photo_blob_id': photoBlobId,
       if (photoKey != null) 'photo_key': photoKey,
@@ -1596,6 +1644,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Value<int?>? gpsLimitM,
     Value<bool>? allowMemberTags,
     Value<bool>? allowChatMode,
+    Value<bool>? requireZone,
     Value<Uint8List?>? photo,
     Value<String?>? photoBlobId,
     Value<String?>? photoKey,
@@ -1622,6 +1671,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       gpsLimitM: gpsLimitM ?? this.gpsLimitM,
       allowMemberTags: allowMemberTags ?? this.allowMemberTags,
       allowChatMode: allowChatMode ?? this.allowChatMode,
+      requireZone: requireZone ?? this.requireZone,
       photo: photo ?? this.photo,
       photoBlobId: photoBlobId ?? this.photoBlobId,
       photoKey: photoKey ?? this.photoKey,
@@ -1688,6 +1738,9 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     if (allowChatMode.present) {
       map['allow_chat_mode'] = Variable<bool>(allowChatMode.value);
     }
+    if (requireZone.present) {
+      map['require_zone'] = Variable<bool>(requireZone.value);
+    }
     if (photo.present) {
       map['photo'] = Variable<Uint8List>(photo.value);
     }
@@ -1730,6 +1783,7 @@ class GroupsCompanion extends UpdateCompanion<Group> {
           ..write('gpsLimitM: $gpsLimitM, ')
           ..write('allowMemberTags: $allowMemberTags, ')
           ..write('allowChatMode: $allowChatMode, ')
+          ..write('requireZone: $requireZone, ')
           ..write('photo: $photo, ')
           ..write('photoBlobId: $photoBlobId, ')
           ..write('photoKey: $photoKey, ')
@@ -2383,10 +2437,8 @@ class GroupMember extends DataClass implements Insertable<GroupMember> {
   final String role;
   final DateTime joinedAt;
 
-  /// The zone this member picked for themselves, or null when unassigned. Set
-  /// only by the member via a signed zoneAssign control message. Resolved
-  /// against the group's current zones; an id no longer present reads as
-  /// unassigned.
+  /// The zone this member picked, or null. Set only by the member; an id absent
+  /// from the current split reads as unassigned.
   final String? assignedZoneId;
   const GroupMember({
     required this.groupId,
@@ -6331,6 +6383,7 @@ typedef $$GroupsTableCreateCompanionBuilder =
       Value<int?> gpsLimitM,
       Value<bool> allowMemberTags,
       Value<bool> allowChatMode,
+      Value<bool> requireZone,
       Value<Uint8List?> photo,
       Value<String?> photoBlobId,
       Value<String?> photoKey,
@@ -6358,6 +6411,7 @@ typedef $$GroupsTableUpdateCompanionBuilder =
       Value<int?> gpsLimitM,
       Value<bool> allowMemberTags,
       Value<bool> allowChatMode,
+      Value<bool> requireZone,
       Value<Uint8List?> photo,
       Value<String?> photoBlobId,
       Value<String?> photoKey,
@@ -6523,6 +6577,11 @@ class $$GroupsTableFilterComposer
 
   ColumnFilters<bool> get allowChatMode => $composableBuilder(
     column: $table.allowChatMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get requireZone => $composableBuilder(
+    column: $table.requireZone,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6726,6 +6785,11 @@ class $$GroupsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get requireZone => $composableBuilder(
+    column: $table.requireZone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<Uint8List> get photo => $composableBuilder(
     column: $table.photo,
     builder: (column) => ColumnOrderings(column),
@@ -6832,6 +6896,11 @@ class $$GroupsTableAnnotationComposer
 
   GeneratedColumn<bool> get allowChatMode => $composableBuilder(
     column: $table.allowChatMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get requireZone => $composableBuilder(
+    column: $table.requireZone,
     builder: (column) => column,
   );
 
@@ -6980,6 +7049,7 @@ class $$GroupsTableTableManager
                 Value<int?> gpsLimitM = const Value.absent(),
                 Value<bool> allowMemberTags = const Value.absent(),
                 Value<bool> allowChatMode = const Value.absent(),
+                Value<bool> requireZone = const Value.absent(),
                 Value<Uint8List?> photo = const Value.absent(),
                 Value<String?> photoBlobId = const Value.absent(),
                 Value<String?> photoKey = const Value.absent(),
@@ -7005,6 +7075,7 @@ class $$GroupsTableTableManager
                 gpsLimitM: gpsLimitM,
                 allowMemberTags: allowMemberTags,
                 allowChatMode: allowChatMode,
+                requireZone: requireZone,
                 photo: photo,
                 photoBlobId: photoBlobId,
                 photoKey: photoKey,
@@ -7032,6 +7103,7 @@ class $$GroupsTableTableManager
                 Value<int?> gpsLimitM = const Value.absent(),
                 Value<bool> allowMemberTags = const Value.absent(),
                 Value<bool> allowChatMode = const Value.absent(),
+                Value<bool> requireZone = const Value.absent(),
                 Value<Uint8List?> photo = const Value.absent(),
                 Value<String?> photoBlobId = const Value.absent(),
                 Value<String?> photoKey = const Value.absent(),
@@ -7057,6 +7129,7 @@ class $$GroupsTableTableManager
                 gpsLimitM: gpsLimitM,
                 allowMemberTags: allowMemberTags,
                 allowChatMode: allowChatMode,
+                requireZone: requireZone,
                 photo: photo,
                 photoBlobId: photoBlobId,
                 photoKey: photoKey,

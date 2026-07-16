@@ -42,11 +42,6 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
   /// committed as is when the user accepts it.
   String? _pendingImport;
 
-  /// Above this many corners an area is treated as imported: shown read-only to
-  /// clear or replace, since editing thousands of vertices by tapping is not
-  /// feasible and would choke the map.
-  static const _maxEditableVertices = 50;
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -164,7 +159,7 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
                   ),
                   child: Text(
                     _readOnlyArea
-                        ? l10n.groupAreaImportedHint
+                        ? l10n.groupAreaCurrentHint
                         : _points.length < 3
                         ? l10n.groupAreaDrawHint
                         : l10n.groupAreaCornerCount(_points.length),
@@ -228,33 +223,15 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
     unawaited(_goToMyLocation(l10n, initial: true));
   }
 
-  /// Shows the group's current area on open. A hand-drawn area (few corners)
-  /// becomes editable handles; a large imported boundary is shown read-only as
-  /// a backdrop to clear or replace, so thousands of vertices never choke it.
+  /// Shows the group's current area read-only as a backdrop to clear or
+  /// replace. It is not edited corner by corner: clear it to draw a new one.
   Future<void> _loadExistingArea(String area) async {
-    final rings = polygonRings(area);
-    if (rings.isEmpty) return;
-    final ring = rings.first;
-    final open =
-        ring.length > 1 &&
-            ring.first[0] == ring.last[0] &&
-            ring.first[1] == ring.last[1]
-        ? ring.sublist(0, ring.length - 1)
-        : ring;
-    if (open.length > _maxEditableVertices) {
-      setState(() => _readOnlyArea = true);
-      await _controller?.setGeoJsonSource(
-        'aoi-poly',
-        jsonDecode(area) as Map<String, dynamic>,
-      );
-      return;
-    }
-    setState(() {
-      _points
-        ..clear()
-        ..addAll([for (final p in open) LatLng(p[1], p[0])]);
-    });
-    await _redraw();
+    if (polygonRings(area).isEmpty) return;
+    setState(() => _readOnlyArea = true);
+    await _controller?.setGeoJsonSource(
+      'aoi-poly',
+      jsonDecode(area) as Map<String, dynamic>,
+    );
   }
 
   Future<void> _frameToArea(String area) async {

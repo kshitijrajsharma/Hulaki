@@ -175,6 +175,11 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
         _reload();
       });
 
+  Future<void> _setRequireZone(String groupId, bool value) => _guard(() async {
+    await ref.read(groupServiceProvider).setRequireZone(groupId, value: value);
+    _reload();
+  });
+
   /// Picks the accuracy cap for sent points. Off clears it; the presets bound
   /// the metres a fix may carry before a send is refused.
   Future<void> _editGpsLimit(
@@ -510,12 +515,14 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                 _ModerationCard(
                   isPublic: group.isPublic,
                   hasArea: group.aoiGeoJson != null,
+                  hasZones: group.zonesGeoJson != null,
                   joinApproval: group.joinApproval,
                   allowMemberExport: group.allowMemberExport,
                   allowMemberPlace: group.allowMemberPlace,
                   allowOutsideArea: group.allowOutsideArea,
                   allowMemberTags: group.allowMemberTags,
                   allowChatMode: group.allowChatMode,
+                  requireZone: group.requireZone,
                   gpsLimitM: group.gpsLimitM,
                   onToggleApproval: (value) =>
                       unawaited(_setJoinApproval(group.id, value)),
@@ -529,6 +536,8 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                       unawaited(_setAllowMemberTags(group.id, value)),
                   onToggleChatMode: (value) =>
                       unawaited(_setAllowChatMode(group.id, value)),
+                  onToggleRequireZone: (value) =>
+                      unawaited(_setRequireZone(group.id, value)),
                   onEditGpsLimit: () => unawaited(
                     _editGpsLimit(group.id, group.gpsLimitM, l10n),
                   ),
@@ -771,12 +780,14 @@ class _ModerationCard extends StatelessWidget {
   const _ModerationCard({
     required this.isPublic,
     required this.hasArea,
+    required this.hasZones,
     required this.joinApproval,
     required this.allowMemberExport,
     required this.allowMemberPlace,
     required this.allowOutsideArea,
     required this.allowMemberTags,
     required this.allowChatMode,
+    required this.requireZone,
     required this.gpsLimitM,
     required this.onToggleApproval,
     required this.onToggleMemberExport,
@@ -784,17 +795,20 @@ class _ModerationCard extends StatelessWidget {
     required this.onToggleOutsideArea,
     required this.onToggleMemberTags,
     required this.onToggleChatMode,
+    required this.onToggleRequireZone,
     required this.onEditGpsLimit,
   });
 
   final bool isPublic;
   final bool hasArea;
+  final bool hasZones;
   final bool joinApproval;
   final bool allowMemberExport;
   final bool allowMemberPlace;
   final bool allowOutsideArea;
   final bool allowMemberTags;
   final bool allowChatMode;
+  final bool requireZone;
   final int? gpsLimitM;
   final ValueChanged<bool> onToggleApproval;
   final ValueChanged<bool> onToggleMemberExport;
@@ -802,6 +816,7 @@ class _ModerationCard extends StatelessWidget {
   final ValueChanged<bool> onToggleOutsideArea;
   final ValueChanged<bool> onToggleMemberTags;
   final ValueChanged<bool> onToggleChatMode;
+  final ValueChanged<bool> onToggleRequireZone;
   final VoidCallback onEditGpsLimit;
 
   @override
@@ -905,6 +920,19 @@ class _ModerationCard extends StatelessWidget {
                 subtitle: Text(l10n.groupAllowOutsideAreaDetail),
                 value: allowOutsideArea,
                 onChanged: onToggleOutsideArea,
+              ),
+            ],
+            if (hasZones) ...[
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.grid_view_outlined,
+                  color: AppColors.ink,
+                ),
+                title: Text(l10n.groupRequireZone),
+                subtitle: Text(l10n.groupRequireZoneDetail),
+                value: requireZone,
+                onChanged: onToggleRequireZone,
               ),
             ],
             const Divider(height: 1),

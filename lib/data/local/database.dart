@@ -65,6 +65,10 @@ class Groups extends Table {
   BoolColumn get allowChatMode =>
       boolean().withDefault(const Constant(false))();
 
+  /// When true and zones are defined, every mapper must select a zone before
+  /// dropping points, so coverage is never left unassigned.
+  BoolColumn get requireZone => boolean().withDefault(const Constant(false))();
+
   BlobColumn get photo => blob().nullable()();
 
   /// The cover photo shared with members: its encrypted blob id in object
@@ -244,7 +248,7 @@ class LocalDatabase extends _$LocalDatabase {
     : super(executor ?? driftDatabase(name: 'hulaki'));
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -309,6 +313,9 @@ class LocalDatabase extends _$LocalDatabase {
       if (from < 17) {
         await m.addColumn(groups, groups.zonesGeoJson);
         await m.addColumn(groupMembers, groupMembers.assignedZoneId);
+      }
+      if (from < 18) {
+        await m.addColumn(groups, groups.requireZone);
       }
     },
   );

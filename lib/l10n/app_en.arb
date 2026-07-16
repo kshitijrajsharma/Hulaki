@@ -436,6 +436,10 @@
   "@threadOutsideZoneBody": {
     "description": "Body of the dialog confirming a point outside the member's assigned zone"
   },
+  "threadPickZoneFirst": "Pick a zone first",
+  "@threadPickZoneFirst": {
+    "description": "Shown when a mapper must select a zone before dropping points"
+  },
   "zonePickTitle": "Choose your zone",
   "@zonePickTitle": {
     "description": "Title of the sheet where a member picks which zone to map"
@@ -1312,9 +1316,9 @@
   "@groupAreaDrawHint": {
     "description": "Hint shown while the drawn area has fewer than three corners"
   },
-  "groupAreaImportedHint": "Imported area shown. Clear to draw a new one, or upload a replacement.",
-  "@groupAreaImportedHint": {
-    "description": "Hint shown when a large imported boundary opens read-only"
+  "groupAreaCurrentHint": "Current area shown. Clear to draw a new one, or upload a replacement.",
+  "@groupAreaCurrentHint": {
+    "description": "Hint shown when the current boundary opens read-only"
   },
   "groupBoundarySaved": "Boundary saved",
   "@groupBoundarySaved": {
@@ -1849,6 +1853,14 @@
   "groupAllowChatModeDetail": "Let members switch a thread to plain messages with no tag or location.",
   "@groupAllowChatModeDetail": {
     "description": "Group setting subtitle for chat mode"
+  },
+  "groupRequireZone": "Require a zone",
+  "@groupRequireZone": {
+    "description": "Group setting: mappers must select a zone before mapping"
+  },
+  "groupRequireZoneDetail": "Everyone must pick a zone before dropping points, so coverage is never unassigned.",
+  "@groupRequireZoneDetail": {
+    "description": "Group setting subtitle for requiring a zone"
   },
   "tourDone": "Got it",
   "@tourDone": {

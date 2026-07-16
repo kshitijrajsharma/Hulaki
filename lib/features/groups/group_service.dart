@@ -279,6 +279,7 @@ class GroupService {
         'gpsLimitM': group.gpsLimitM,
         'allowMemberTags': group.allowMemberTags,
         'allowChatMode': group.allowChatMode,
+        'requireZone': group.requireZone,
         'adminRootKey': group.adminRootKey,
         'creatorName': self?.displayName,
         'creatorAgreementKey': self?.agreementKey,
@@ -618,6 +619,18 @@ class GroupService {
   }) async {
     await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
       GroupsCompanion(allowOutsideArea: Value(value)),
+    );
+    await _publishFullMeta(groupId);
+  }
+
+  /// Toggles whether every mapper must select a zone before dropping points,
+  /// and republishes.
+  Future<void> setRequireZone(
+    String groupId, {
+    required bool value,
+  }) async {
+    await (db.update(db.groups)..where((g) => g.id.equals(groupId))).write(
+      GroupsCompanion(requireZone: Value(value)),
     );
     await _publishFullMeta(groupId);
   }

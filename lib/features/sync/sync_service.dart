@@ -857,6 +857,9 @@ class SyncService {
             allowChatMode: Value(
               meta['allowChatMode'] as bool? ?? false,
             ),
+            requireZone: Value(
+              meta['requireZone'] as bool? ?? false,
+            ),
           ),
           onConflict: DoUpdate(
             (_) => GroupsCompanion(
@@ -885,6 +888,9 @@ class SyncService {
               ),
               allowChatMode: Value(
                 meta['allowChatMode'] as bool? ?? false,
+              ),
+              requireZone: Value(
+                meta['requireZone'] as bool? ?? false,
               ),
             ),
           ),

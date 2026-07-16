@@ -357,6 +357,18 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       return false;
     }
 
+    if (group.requireZone) {
+      final zones =
+          ref.read(zonesProvider(widget.groupId)).asData?.value ?? const [];
+      if (zones.isNotEmpty &&
+          ref.read(myAssignedZoneProvider(widget.groupId)) == null) {
+        if (!mounted) return false;
+        _blockedSnack(l10n.threadPickZoneFirst);
+        unawaited(showZonePickerSheet(context, widget.groupId));
+        return false;
+      }
+    }
+
     final limit = group.gpsLimitM;
     final accuracy = geo.accuracyM;
     if (limit != null && accuracy != null && accuracy > limit) {
