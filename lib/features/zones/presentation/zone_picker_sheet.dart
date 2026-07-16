@@ -55,60 +55,65 @@ class _ZonePickerSheet extends ConsumerWidget {
         members.where((m) => m.assignedZoneId == zoneId).length;
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.lg,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.8,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.mist,
-                  borderRadius: BorderRadius.circular(99),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.mist,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(l10n.zonePickTitle, style: theme(context).titleLarge),
-            const SizedBox(height: AppSpacing.xs),
-            Text(l10n.zonePickSubtitle, style: theme(context).bodyMedium),
-            const SizedBox(height: AppSpacing.md),
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: zones.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (context, i) {
-                  final zone = zones[i];
-                  return _ZoneRow(
-                    zone: zone,
-                    selected: zone.id == assigned?.id,
-                    points: counts[zone.id] ?? 0,
-                    mappers: mappers(zone.id),
-                    onJoin: () => _pick(context, ref, zone.id),
-                  );
-                },
+              const SizedBox(height: AppSpacing.md),
+              Text(l10n.zonePickTitle, style: theme(context).titleLarge),
+              const SizedBox(height: AppSpacing.xs),
+              Text(l10n.zonePickSubtitle, style: theme(context).bodyMedium),
+              const SizedBox(height: AppSpacing.md),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: zones.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, i) {
+                    final zone = zones[i];
+                    return _ZoneRow(
+                      zone: zone,
+                      selected: zone.id == assigned?.id,
+                      points: counts[zone.id] ?? 0,
+                      mappers: mappers(zone.id),
+                      onJoin: () => _pick(context, ref, zone.id),
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextButton(
-              onPressed: () => assigned == null
-                  ? Navigator.of(context).pop()
-                  : _pick(context, ref, null),
-              child: Text(
-                assigned == null ? l10n.zoneMapAnywhere : l10n.zoneLeave,
+              const SizedBox(height: AppSpacing.md),
+              TextButton(
+                onPressed: () => assigned == null
+                    ? Navigator.of(context).pop()
+                    : _pick(context, ref, null),
+                child: Text(
+                  assigned == null ? l10n.zoneMapAnywhere : l10n.zoneLeave,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

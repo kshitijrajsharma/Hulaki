@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hulaki/app/providers.dart';
@@ -8,21 +10,31 @@ import 'package:hulaki/l10n/app_localizations.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 /// Admin-only coverage: a map of the zones over the list, so which area is
-/// which is clear. Names show only here (like the hidden roster); anonymous
+/// which is clear. Tapping a zone expands its full mapper list and highlights
+/// it on the map. Names show only here (like the hidden roster); anonymous
 /// points count but stay unnamed.
-class ZoneCoverageScreen extends ConsumerWidget {
+class ZoneCoverageScreen extends ConsumerStatefulWidget {
   const ZoneCoverageScreen({required this.groupId, super.key});
 
   final String groupId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ZoneCoverageScreen> createState() => _ZoneCoverageScreenState();
+}
+
+class _ZoneCoverageScreenState extends ConsumerState<ZoneCoverageScreen> {
+  String? _selectedZoneId;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final zones = ref.watch(zonesProvider(groupId)).asData?.value ?? const [];
+    final zones =
+        ref.watch(zonesProvider(widget.groupId)).asData?.value ?? const [];
     final members =
-        ref.watch(groupMembersProvider(groupId)).asData?.value ?? const [];
+        ref.watch(groupMembersProvider(widget.groupId)).asData?.value ??
+        const [];
     final messages =
-        ref.watch(messagesProvider(groupId)).asData?.value ?? const [];
+        ref.watch(messagesProvider(widget.groupId)).asData?.value ?? const [];
 
     final counts = countsByZone(zones, [
       for (final m in messages)
@@ -38,7 +50,8 @@ class ZoneCoverageScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (zones.isNotEmpty) _CoverageMap(zones: zones),
+          if (zones.isNotEmpty)
+            _CoverageMap(zones: zones, selectedZoneId: _selectedZoneId),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Column(
@@ -70,6 +83,12 @@ class ZoneCoverageScreen extends ConsumerWidget {
                       for (final m in members)
                         if (m.assignedZoneId == zone.id) m.name,
                     ],
+                    expanded: _selectedZoneId == zone.id,
+                    onTap: () => setState(
+                      () => _selectedZoneId = _selectedZoneId == zone.id
+                          ? null
+                          : zone.id,
+                    ),
                   ),
               ],
             ),
@@ -80,12 +99,13 @@ class ZoneCoverageScreen extends ConsumerWidget {
   }
 }
 
-/// A framed, read-only map of the zones (coloured outlines with names), so an
-/// admin can match each coverage row to its place on the ground.
+/// A framed, read-only map of the zones (coloured outlines with names). The
+/// selected zone is drawn in ink and the camera frames it.
 class _CoverageMap extends StatefulWidget {
-  const _CoverageMap({required this.zones});
+  const _CoverageMap({required this.zones, required this.selectedZoneId});
 
   final List<Zone> zones;
+  final String? selectedZoneId;
 
   static const _styleUrl =
       'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
@@ -96,6 +116,32 @@ class _CoverageMap extends StatefulWidget {
 
 class _CoverageMapState extends State<_CoverageMap> {
   MapLibreMapController? _controller;
+
+  @override
+  void didUpdateWidget(_CoverageMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedZoneId != widget.selectedZoneId) {
+      unawaited(_apply());
+    }
+  }
+
+  Future<void> _apply() async {
+    final controller = _controller;
+    if (controller == null) return;
+    await controller.setGeoJsonSource('zones', _features());
+    final bounds = _boundsFor(widget.selectedZoneId) ?? _boundsFor(null);
+    if (bounds != null) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          bounds,
+          left: 32,
+          right: 32,
+          top: 32,
+          bottom: 32,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +170,7 @@ class _CoverageMapState extends State<_CoverageMap> {
       'zones-outline',
       const LineLayerProperties(
         lineColor: [Expressions.get, 'lineColor'],
-        lineWidth: 1.8,
+        lineWidth: [Expressions.get, 'lineWidth'],
       ),
     );
     await controller.addSymbolLayer(
@@ -140,8 +186,7 @@ class _CoverageMapState extends State<_CoverageMap> {
         symbolPlacement: 'point',
       ),
     );
-
-    final bounds = _bounds();
+    final bounds = _boundsFor(widget.selectedZoneId) ?? _boundsFor(null);
     if (bounds != null) {
       await controller.animateCamera(
         CameraUpdate.newLatLngBounds(
@@ -161,7 +206,13 @@ class _CoverageMapState extends State<_CoverageMap> {
       for (final zone in widget.zones)
         {
           'type': 'Feature',
-          'properties': {'name': zone.name, 'lineColor': _hex(zone.colorValue)},
+          'properties': {
+            'name': zone.name,
+            'lineColor': zone.id == widget.selectedZoneId
+                ? '#15181B'
+                : _hex(zone.colorValue),
+            'lineWidth': zone.id == widget.selectedZoneId ? 3.0 : 1.8,
+          },
           'geometry': {
             'type': 'MultiPolygon',
             'coordinates': [
@@ -175,13 +226,15 @@ class _CoverageMapState extends State<_CoverageMap> {
   String _hex(int argb) =>
       '#${(argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
-  LatLngBounds? _bounds() {
+  /// Bounds of one zone, or of every zone when [zoneId] is null.
+  LatLngBounds? _boundsFor(String? zoneId) {
     var minLng = 180.0;
     var minLat = 90.0;
     var maxLng = -180.0;
     var maxLat = -90.0;
     var any = false;
     for (final zone in widget.zones) {
+      if (zoneId != null && zone.id != zoneId) continue;
       for (final ring in zone.pieces) {
         for (final point in ring) {
           any = true;
@@ -206,17 +259,21 @@ class _CoverageRow extends StatelessWidget {
     required this.colorValue,
     required this.points,
     required this.mappers,
+    required this.expanded,
+    required this.onTap,
   });
 
   final String name;
   final int colorValue;
   final int points;
   final List<String> mappers;
+  final bool expanded;
+  final VoidCallback onTap;
 
-  /// A couple of names then an overflow count, so a crowded zone never spills.
+  /// Two names then a count when collapsed; the whole team when expanded.
   String _mappersLabel(AppLocalizations l10n) {
     if (mappers.isEmpty) return l10n.zoneNeedsMapper;
-    if (mappers.length <= 2) return mappers.join(', ');
+    if (expanded || mappers.length <= 2) return mappers.join(', ');
     return '${mappers.take(2).join(', ')} +${mappers.length - 2}';
   }
 
@@ -225,6 +282,9 @@ class _CoverageRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context).textTheme;
     return ListTile(
+      onTap: onTap,
+      selected: expanded,
+      selectedTileColor: AppColors.mist,
       leading: Container(
         width: 12,
         height: 12,
@@ -236,8 +296,8 @@ class _CoverageRow extends StatelessWidget {
       title: Text(name, style: theme.titleMedium),
       subtitle: Text(
         _mappersLabel(l10n),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        maxLines: expanded ? null : 1,
+        overflow: expanded ? null : TextOverflow.ellipsis,
         style: theme.bodySmall?.copyWith(
           color: mappers.isEmpty
               ? AppColors.amberText
