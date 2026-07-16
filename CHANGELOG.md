@@ -1,3 +1,9 @@
+## v0.0.17 (2026-07-16)
+
+### Fix
+
+- **zone**: fix zone approval moderation
+
 ## v0.0.16 (2026-07-16)
 
 ### Fix
