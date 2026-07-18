@@ -283,6 +283,37 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
     _saved();
   });
 
+  /// Picks who can discover the group: private, nearby, or everyone.
+  Future<void> _editReach(
+    String groupId,
+    String current,
+    AppLocalizations l10n,
+  ) async {
+    String label(String reach) => switch (reach) {
+      'local' => l10n.groupReachNearby,
+      'global' => l10n.groupReachEveryone,
+      _ => l10n.groupReachPrivate,
+    };
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(l10n.groupReach),
+        children: [
+          for (final option in const ['private', 'local', 'global'])
+            ListTile(
+              title: Text(label(option)),
+              trailing: current == option
+                  ? const Icon(Icons.check, color: AppColors.ink)
+                  : null,
+              onTap: () => Navigator.of(dialogContext).pop(option),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || chosen == current) return;
+    await _setReach(groupId, chosen, l10n);
+  }
+
   /// The group's map centre: the area's midpoint, else the average of its
   /// points. Null when the group has neither, so it cannot be located.
   Future<(double, double)?> _groupCenter(
@@ -491,6 +522,16 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                 link: ref.read(groupServiceProvider).inviteLinkFor(group),
               ),
               const SizedBox(height: AppSpacing.lg),
+              _QuickTagsCard(
+                onEdit: () => _editHotKeys(
+                  context,
+                  ref,
+                  group.id,
+                  l10n,
+                  editable: iAmAdmin || group.allowMemberTags,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
               _MembersCard(
                 groupId: group.id,
                 inviteLink: ref.read(groupServiceProvider).inviteLinkFor(group),
@@ -504,16 +545,9 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                 ),
               ],
               const SizedBox(height: AppSpacing.lg),
-              _ManageCard(
+              _OfflineCard(
                 caching: _caching,
                 memberExport: !iAmAdmin && group.allowMemberExport,
-                onEditHotKeys: () => _editHotKeys(
-                  context,
-                  ref,
-                  group.id,
-                  l10n,
-                  editable: iAmAdmin || group.allowMemberTags,
-                ),
                 onMakeOffline: () => _makeOffline(group, l10n),
                 onExport: () => showModalBottomSheet<void>(
                   context: context,
@@ -558,13 +592,13 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                     _editGpsLimit(group.id, group.gpsLimitM, l10n),
                   ),
                   reach: group.isPublic ? group.scope : 'private',
-                  onExport: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => ExportSheet(group: group),
+                  onEditReach: () => unawaited(
+                    _editReach(
+                      group.id,
+                      group.isPublic ? group.scope : 'private',
+                      l10n,
+                    ),
                   ),
-                  onSetReach: (reach) => _setReach(group.id, reach, l10n),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _AdminCard(
@@ -573,6 +607,12 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
                     builder: (_) => ShareWebSheet(group: group),
+                  ),
+                  onExport: () => showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => ExportSheet(group: group),
                   ),
                   onArchive: () => _archive(group.id),
                   onDelete: () => _delete(group.id, group.name, l10n),
@@ -826,8 +866,7 @@ class _ModerationCard extends StatefulWidget {
     required this.onToggleChatMode,
     required this.onToggleRequireZone,
     required this.onEditGpsLimit,
-    required this.onExport,
-    required this.onSetReach,
+    required this.onEditReach,
   });
 
   final bool isPublic;
@@ -852,8 +891,7 @@ class _ModerationCard extends StatefulWidget {
   final ValueChanged<bool> onToggleChatMode;
   final ValueChanged<bool> onToggleRequireZone;
   final VoidCallback onEditGpsLimit;
-  final VoidCallback onExport;
-  final ValueChanged<String> onSetReach;
+  final VoidCallback onEditReach;
 
   @override
   State<_ModerationCard> createState() => _ModerationCardState();
@@ -866,6 +904,11 @@ class _ModerationCardState extends State<_ModerationCard> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final gpsLimit = widget.gpsLimitM;
+    final reachLabel = switch (widget.reach) {
+      'local' => l10n.groupReachNearby,
+      'global' => l10n.groupReachEveryone,
+      _ => l10n.groupReachPrivate,
+    };
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -997,68 +1040,16 @@ class _ModerationCardState extends State<_ModerationCard> {
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(
-                  Icons.download_outlined,
+                  Icons.travel_explore_outlined,
                   color: AppColors.ink,
                 ),
-                title: Text(l10n.groupExportTitle),
-                subtitle: Text(
-                  widget.allowMemberExport
-                      ? l10n.groupExportEveryoneDetail
-                      : l10n.groupExportAdminsOnlyDetail,
-                ),
+                title: Text(l10n.groupReach),
+                subtitle: Text(reachLabel),
                 trailing: const Icon(
                   Icons.chevron_right,
                   color: AppColors.textFaint,
                 ),
-                onTap: widget.onExport,
-              ),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.travel_explore_outlined,
-                          color: AppColors.ink,
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Text(
-                          l10n.groupReach,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      l10n.groupReachDetail,
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    SegmentedButton<String>(
-                      showSelectedIcon: false,
-                      segments: [
-                        ButtonSegment(
-                          value: 'private',
-                          label: Text(l10n.groupReachPrivate),
-                        ),
-                        ButtonSegment(
-                          value: 'local',
-                          label: Text(l10n.groupReachNearby),
-                        ),
-                        ButtonSegment(
-                          value: 'global',
-                          label: Text(l10n.groupReachEveryone),
-                        ),
-                      ],
-                      selected: {widget.reach},
-                      onSelectionChanged: (selection) =>
-                          widget.onSetReach(selection.first),
-                    ),
-                  ],
-                ),
+                onTap: widget.onEditReach,
               ),
             ],
           ],
@@ -1071,11 +1062,13 @@ class _ModerationCardState extends State<_ModerationCard> {
 class _AdminCard extends StatelessWidget {
   const _AdminCard({
     required this.onPublish,
+    required this.onExport,
     required this.onArchive,
     required this.onDelete,
   });
 
   final VoidCallback onPublish;
+  final VoidCallback onExport;
   final VoidCallback onArchive;
   final VoidCallback onDelete;
 
@@ -1101,6 +1094,20 @@ class _AdminCard extends StatelessWidget {
                 color: AppColors.textFaint,
               ),
               onTap: onPublish,
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(
+                Icons.download_outlined,
+                color: AppColors.ink,
+              ),
+              title: Text(l10n.groupExportTitle),
+              subtitle: Text(l10n.groupExportEveryoneDetail),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: AppColors.textFaint,
+              ),
+              onTap: onExport,
             ),
             const Divider(height: 1),
             ListTile(
@@ -1742,27 +1749,13 @@ class _AreaCard extends StatelessWidget {
   }
 }
 
-class _ManageCard extends StatelessWidget {
-  const _ManageCard({
-    required this.caching,
-    required this.memberExport,
-    required this.onEditHotKeys,
-    required this.onMakeOffline,
-    required this.onExport,
-  });
+class _CardShell extends StatelessWidget {
+  const _CardShell({required this.children});
 
-  final bool caching;
-
-  /// A non-admin the group allows to export sees the export row here; an admin
-  /// reaches export from Moderation instead.
-  final bool memberExport;
-  final VoidCallback onEditHotKeys;
-  final VoidCallback onMakeOffline;
-  final VoidCallback onExport;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -1771,53 +1764,84 @@ class _ManageCard extends StatelessWidget {
       ),
       child: Material(
         color: AppColors.white,
-        child: Column(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.label_outline, color: AppColors.ink),
-              title: Text(l10n.groupQuickTagsTitle),
-              trailing: const Icon(
-                Icons.chevron_right,
-                color: AppColors.textFaint,
-              ),
-              onTap: onEditHotKeys,
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(
-                Icons.offline_pin_outlined,
-                color: AppColors.ink,
-              ),
-              title: Text(l10n.groupMakeOffline),
-              subtitle: Text(l10n.groupMakeOfflineDetail),
-              trailing: caching
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.chevron_right, color: AppColors.textFaint),
-              onTap: caching ? null : onMakeOffline,
-            ),
-            if (memberExport) ...[
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(
-                  Icons.download_outlined,
-                  color: AppColors.ink,
-                ),
-                title: Text(l10n.groupExportTitle),
-                subtitle: Text(l10n.groupExportEveryoneDetail),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.textFaint,
-                ),
-                onTap: onExport,
-              ),
-            ],
-          ],
-        ),
+        child: Column(children: children),
       ),
+    );
+  }
+}
+
+class _QuickTagsCard extends StatelessWidget {
+  const _QuickTagsCard({required this.onEdit});
+
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return _CardShell(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.label_outline, color: AppColors.ink),
+          title: Text(l10n.groupQuickTagsTitle),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.textFaint),
+          onTap: onEdit,
+        ),
+      ],
+    );
+  }
+}
+
+class _OfflineCard extends StatelessWidget {
+  const _OfflineCard({
+    required this.caching,
+    required this.memberExport,
+    required this.onMakeOffline,
+    required this.onExport,
+  });
+
+  final bool caching;
+
+  /// A non-admin the group allows to export sees the export row here; an admin
+  /// reaches export from the admin card instead.
+  final bool memberExport;
+  final VoidCallback onMakeOffline;
+  final VoidCallback onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return _CardShell(
+      children: [
+        ListTile(
+          leading: const Icon(
+            Icons.offline_pin_outlined,
+            color: AppColors.ink,
+          ),
+          title: Text(l10n.groupMakeOffline),
+          subtitle: Text(l10n.groupMakeOfflineDetail),
+          trailing: caching
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.chevron_right, color: AppColors.textFaint),
+          onTap: caching ? null : onMakeOffline,
+        ),
+        if (memberExport) ...[
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.download_outlined, color: AppColors.ink),
+            title: Text(l10n.groupExportTitle),
+            subtitle: Text(l10n.groupExportEveryoneDetail),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: AppColors.textFaint,
+            ),
+            onTap: onExport,
+          ),
+        ],
+      ],
     );
   }
 }

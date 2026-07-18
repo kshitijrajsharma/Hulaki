@@ -1614,10 +1614,6 @@
   "@groupReach": {
     "description": "Heading for the control that lists the group publicly"
   },
-  "groupReachDetail": "Who can find this group",
-  "@groupReachDetail": {
-    "description": "Explains the three discovery options"
-  },
   "groupReachPrivate": "Private",
   "@groupReachPrivate": {
     "description": "Discovery option: not listed anywhere"
@@ -1689,10 +1685,6 @@
   "groupExportEveryoneDetail": "Download this group’s points and photos",
   "@groupExportEveryoneDetail": {
     "description": "Subtitle of the export row when every member may export"
-  },
-  "groupExportAdminsOnlyDetail": "Admins only",
-  "@groupExportAdminsOnlyDetail": {
-    "description": "Subtitle of the export row when only admins may export"
   },
   "groupExportProjectZip": "Project .zip",
   "@groupExportProjectZip": {
@@ -1786,7 +1778,7 @@
   "@tourSampleTitle": {
     "description": "Guided tour: title for the seeded sample group"
   },
-  "tourSampleBody": "This is a sample group, explore it to see how everything works. Then add your own point and watch it appear on the map.",
+  "tourSampleBody": "A sample to explore. Add a point and watch it appear on the map.",
   "@tourSampleBody": {
     "description": "Guided tour: what the sample group is for"
   },
@@ -1794,7 +1786,7 @@
   "@tourGpsTitle": {
     "description": "Capture walkthrough: the live GPS accuracy strip"
   },
-  "tourGpsBody": "This bar shows how accurate your location is. Green is sharp, amber and red are looser, and the number is the margin (±5 m). Wait for green so your points land in the right place.",
+  "tourGpsBody": "Shows your GPS accuracy. Wait for green so points land in the right place.",
   "@tourGpsBody": {
     "description": "Capture walkthrough: what the GPS accuracy strip means"
   },
@@ -1842,7 +1834,7 @@
   "@chatModeInfoTitle": {
     "description": "Info sheet title for chat mode"
   },
-  "chatModeInfoBody": "Turn this on to talk with the group without dropping a point. Messages carry no tag and no location. Turn it off to go back to mapping. It starts off each time you open the chat.",
+  "chatModeInfoBody": "Talk to the group without dropping a point. No tag, no location. Off by default each time.",
   "@chatModeInfoBody": {
     "description": "Info sheet body explaining chat mode"
   },
