@@ -273,10 +273,7 @@ class _GroupPreviewScreenState extends ConsumerState<GroupPreviewScreen> {
       case _RequestState.requesting:
         return PrimaryButton(label: l10n.discoverRequesting, loading: true);
       case _RequestState.pending:
-        return PrimaryButton(
-          label: l10n.discoverWaitingApproval,
-          loading: true,
-        );
+        return PrimaryButton(label: l10n.discoverRequestSent);
       case _RequestState.joining:
         return PrimaryButton(label: l10n.discoverJoining, loading: true);
     }

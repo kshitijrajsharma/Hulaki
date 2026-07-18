@@ -10,6 +10,7 @@ import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/auth/application/auth_state.dart';
 import 'package:hulaki/features/map/offline_areas.dart';
 import 'package:hulaki/features/map/offline_downloads.dart';
+import 'package:hulaki/features/onboarding/how_it_works_screen.dart';
 import 'package:hulaki/features/settings/background_run_provider.dart';
 import 'package:hulaki/features/settings/language_picker.dart';
 import 'package:hulaki/features/settings/locale_provider.dart';
@@ -60,6 +61,18 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   Future<void> _setBackgroundRun({required bool value}) async {
     await ref.read(backgroundRunProvider.notifier).set(value: value);
     _saved();
+  }
+
+  /// Re-opens the how-it-works intro for a refresher; both buttons just close.
+  Future<void> _replayTutorial() {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => HowItWorksScreen(
+          onFollowTutorial: () => Navigator.of(routeContext).pop(),
+          onSkip: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
   }
 
   Future<void> _remove(int id) async {
@@ -246,6 +259,14 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           const _ArchivedGroups(),
           const SizedBox(height: AppSpacing.xl),
           _SectionLabel(l10n.meSectionSupport),
+          const SizedBox(height: AppSpacing.sm),
+          _SupportRow(
+            icon: Icons.school_outlined,
+            iconColor: AppColors.ink,
+            title: l10n.meViewTutorial,
+            subtitle: l10n.meViewTutorialSubtitle,
+            onTap: () => unawaited(_replayTutorial()),
+          ),
           const SizedBox(height: AppSpacing.sm),
           _SupportRow(
             icon: Icons.star_outline,

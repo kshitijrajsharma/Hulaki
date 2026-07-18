@@ -801,20 +801,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                                   border: Border.all(
                                     width: 1.5,
                                     color: glow
-                                        ? AppColors.amber.withValues(alpha: 0.6)
+                                        ? AppColors.ink
                                         : const Color(0x00000000),
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: glow
-                                          ? AppColors.amber.withValues(
-                                              alpha: 0.4,
-                                            )
-                                          : const Color(0x00000000),
-                                      blurRadius: glow ? 14 : 0,
-                                      spreadRadius: glow ? 1 : 0,
-                                    ),
-                                  ],
                                 ),
                                 child: GestureDetector(
                                   onLongPress: () =>

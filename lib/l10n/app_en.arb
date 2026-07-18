@@ -264,6 +264,14 @@
   "@meRestore": {
     "description": "Button that unarchives a group"
   },
+  "meViewTutorial": "How it works",
+  "@meViewTutorial": {
+    "description": "Title of the row that replays the how-it-works intro"
+  },
+  "meViewTutorialSubtitle": "See the intro again",
+  "@meViewTutorialSubtitle": {
+    "description": "Subtitle of the row that replays the intro"
+  },
   "meRepoTitle": "Star or raise an issue",
   "@meRepoTitle": {
     "description": "Title of the row that opens the GitHub repository"
@@ -900,9 +908,9 @@
   "@discoverRequesting": {
     "description": "Button label while the join request is being filed"
   },
-  "discoverWaitingApproval": "Waiting for approval…",
-  "@discoverWaitingApproval": {
-    "description": "Button label while an admin has yet to approve the join request"
+  "discoverRequestSent": "Request sent, awaiting approval",
+  "@discoverRequestSent": {
+    "description": "Button label after a join request is sent, before an admin approves"
   },
   "mapBackChat": "Chat",
   "@mapBackChat": {

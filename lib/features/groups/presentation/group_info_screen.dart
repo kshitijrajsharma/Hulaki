@@ -798,8 +798,8 @@ class _EditableIdentityState extends State<_EditableIdentity> {
 
 /// Admin-only group controls that shape what members may do: join approval,
 /// export, map placement, mapping-area enforcement, tag editing, and the
-/// accuracy cap.
-class _ModerationCard extends StatelessWidget {
+/// accuracy cap. Collapsed by default so the screen opens simple.
+class _ModerationCard extends StatefulWidget {
   const _ModerationCard({
     required this.isPublic,
     required this.hasArea,
@@ -843,9 +843,16 @@ class _ModerationCard extends StatelessWidget {
   final VoidCallback onEditGpsLimit;
 
   @override
+  State<_ModerationCard> createState() => _ModerationCardState();
+}
+
+class _ModerationCardState extends State<_ModerationCard> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final gpsLimit = gpsLimitM;
+    final gpsLimit = widget.gpsLimitM;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -856,126 +863,125 @@ class _ModerationCard extends StatelessWidget {
         color: AppColors.white,
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.xs,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.groupModerationHeading,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.6,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ),
-            ),
-            if (isPublic) ...[
-              SwitchListTile(
-                secondary: const Icon(
-                  Icons.verified_user_outlined,
-                  color: AppColors.ink,
-                ),
-                title: Text(l10n.groupRequireApproval),
-                subtitle: Text(l10n.groupRequireApprovalDetail),
-                value: joinApproval,
-                onChanged: onToggleApproval,
-              ),
-              const Divider(height: 1),
-            ],
-            SwitchListTile(
-              secondary: const Icon(
-                Icons.download_outlined,
-                color: AppColors.ink,
-              ),
-              title: Text(l10n.groupAllowMemberExport),
-              subtitle: Text(l10n.groupAllowMemberExportDetail),
-              value: allowMemberExport,
-              onChanged: onToggleMemberExport,
-            ),
-            const Divider(height: 1),
-            SwitchListTile(
-              secondary: const Icon(
-                Icons.add_location_alt_outlined,
-                color: AppColors.ink,
-              ),
-              title: Text(l10n.groupAllowMemberPlace),
-              subtitle: Text(l10n.groupAllowMemberPlaceDetail),
-              value: allowMemberPlace,
-              onChanged: onToggleMemberPlace,
-            ),
-            const Divider(height: 1),
-            SwitchListTile(
-              secondary: const Icon(
-                Icons.label_outline,
-                color: AppColors.ink,
-              ),
-              title: Text(l10n.groupAllowMemberTags),
-              subtitle: Text(l10n.groupAllowMemberTagsDetail),
-              value: allowMemberTags,
-              onChanged: onToggleMemberTags,
-            ),
-            const Divider(height: 1),
-            SwitchListTile(
-              secondary: const Icon(
-                Icons.chat_bubble_outline,
-                color: AppColors.ink,
-              ),
-              title: Text(l10n.groupAllowChatMode),
-              subtitle: Text(l10n.groupAllowChatModeDetail),
-              value: allowChatMode,
-              onChanged: onToggleChatMode,
-            ),
-            if (hasArea) ...[
-              const Divider(height: 1),
-              SwitchListTile(
-                secondary: const Icon(
-                  Icons.fmd_bad_outlined,
-                  color: AppColors.ink,
-                ),
-                title: Text(l10n.groupAllowOutsideArea),
-                subtitle: Text(l10n.groupAllowOutsideAreaDetail),
-                value: allowOutsideArea,
-                onChanged: onToggleOutsideArea,
-              ),
-            ],
-            if (hasZones) ...[
-              const Divider(height: 1),
-              SwitchListTile(
-                secondary: const Icon(
-                  Icons.grid_view_outlined,
-                  color: AppColors.ink,
-                ),
-                title: Text(l10n.groupRequireZone),
-                subtitle: Text(l10n.groupRequireZoneDetail),
-                value: requireZone,
-                onChanged: onToggleRequireZone,
-              ),
-            ],
-            const Divider(height: 1),
             ListTile(
-              leading: const Icon(
-                Icons.gps_fixed,
-                color: AppColors.ink,
+              title: Text(
+                l10n.groupModerationHeading,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                  color: AppColors.textMuted,
+                ),
               ),
-              title: Text(l10n.groupRequireGoodGps),
-              subtitle: Text(
-                gpsLimit == null
-                    ? l10n.groupGpsLimitOffDetail
-                    : l10n.groupGpsLimitDetail(gpsLimit),
+              trailing: Icon(
+                _expanded ? Icons.expand_less : Icons.expand_more,
+                color: AppColors.textMuted,
               ),
-              trailing: const Icon(
-                Icons.chevron_right,
-                color: AppColors.textFaint,
-              ),
-              onTap: onEditGpsLimit,
+              onTap: () => setState(() => _expanded = !_expanded),
             ),
+            if (_expanded) ...[
+              const Divider(height: 1),
+              if (widget.isPublic) ...[
+                SwitchListTile(
+                  secondary: const Icon(
+                    Icons.verified_user_outlined,
+                    color: AppColors.ink,
+                  ),
+                  title: Text(l10n.groupRequireApproval),
+                  subtitle: Text(l10n.groupRequireApprovalDetail),
+                  value: widget.joinApproval,
+                  onChanged: widget.onToggleApproval,
+                ),
+                const Divider(height: 1),
+              ],
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.download_outlined,
+                  color: AppColors.ink,
+                ),
+                title: Text(l10n.groupAllowMemberExport),
+                subtitle: Text(l10n.groupAllowMemberExportDetail),
+                value: widget.allowMemberExport,
+                onChanged: widget.onToggleMemberExport,
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.add_location_alt_outlined,
+                  color: AppColors.ink,
+                ),
+                title: Text(l10n.groupAllowMemberPlace),
+                subtitle: Text(l10n.groupAllowMemberPlaceDetail),
+                value: widget.allowMemberPlace,
+                onChanged: widget.onToggleMemberPlace,
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.label_outline,
+                  color: AppColors.ink,
+                ),
+                title: Text(l10n.groupAllowMemberTags),
+                subtitle: Text(l10n.groupAllowMemberTagsDetail),
+                value: widget.allowMemberTags,
+                onChanged: widget.onToggleMemberTags,
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: AppColors.ink,
+                ),
+                title: Text(l10n.groupAllowChatMode),
+                subtitle: Text(l10n.groupAllowChatModeDetail),
+                value: widget.allowChatMode,
+                onChanged: widget.onToggleChatMode,
+              ),
+              if (widget.hasArea) ...[
+                const Divider(height: 1),
+                SwitchListTile(
+                  secondary: const Icon(
+                    Icons.fmd_bad_outlined,
+                    color: AppColors.ink,
+                  ),
+                  title: Text(l10n.groupAllowOutsideArea),
+                  subtitle: Text(l10n.groupAllowOutsideAreaDetail),
+                  value: widget.allowOutsideArea,
+                  onChanged: widget.onToggleOutsideArea,
+                ),
+              ],
+              if (widget.hasZones) ...[
+                const Divider(height: 1),
+                SwitchListTile(
+                  secondary: const Icon(
+                    Icons.grid_view_outlined,
+                    color: AppColors.ink,
+                  ),
+                  title: Text(l10n.groupRequireZone),
+                  subtitle: Text(l10n.groupRequireZoneDetail),
+                  value: widget.requireZone,
+                  onChanged: widget.onToggleRequireZone,
+                ),
+              ],
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(
+                  Icons.gps_fixed,
+                  color: AppColors.ink,
+                ),
+                title: Text(l10n.groupRequireGoodGps),
+                subtitle: Text(
+                  gpsLimit == null
+                      ? l10n.groupGpsLimitOffDetail
+                      : l10n.groupGpsLimitDetail(gpsLimit),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textFaint,
+                ),
+                onTap: widget.onEditGpsLimit,
+              ),
+            ],
           ],
         ),
       ),
