@@ -1,3 +1,11 @@
+## v0.0.19 (2026-07-18)
+
+### Fix
+
+- **reorganize**: organize the options in group
+- **np**: added np language and restructures the admin view
+- **chore**: fix the annotation style open in chat highlight
+
 ## v0.0.18 (2026-07-16)
 
 ### Fix
