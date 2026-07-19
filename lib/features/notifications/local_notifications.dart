@@ -7,7 +7,11 @@ abstract interface class LocalNotifications {
     required int id,
     required String title,
     required String body,
+    String? payload,
   });
+
+  /// Emits the payload of a notification the user taps while the app is alive.
+  Stream<String> get onTap;
 }
 
 class NoopLocalNotifications implements LocalNotifications {
@@ -21,5 +25,9 @@ class NoopLocalNotifications implements LocalNotifications {
     required int id,
     required String title,
     required String body,
+    String? payload,
   }) async {}
+
+  @override
+  Stream<String> get onTap => const Stream<String>.empty();
 }

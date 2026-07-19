@@ -3,18 +3,19 @@ import 'package:flutter/widgets.dart';
 /// Hulaki brand palette.
 ///
 /// Ink leads everything: buttons, the mark, active states. Amber stays
-/// reserved for GPS and signal. Paper is the app background, mist the
-/// surface and divider tone.
+/// reserved for GPS and signal. The background family (paper, then hairline,
+/// field, mist) is a near-neutral light grey carrying only a trace of warmth,
+/// held close to neutral by design so white cards read cleanly on it.
 abstract final class AppColors {
   const AppColors._();
 
   static const Color ink = Color(0xFF15181B);
   static const Color inkSoft = Color(0xFF1F2421);
-  static const Color paper = Color(0xFFF6F4EE);
-  static const Color mist = Color(0xFFECE7DF);
+  static const Color paper = Color(0xFFF6F6F4);
+  static const Color mist = Color(0xFFE7E6E3);
   static const Color white = Color(0xFFFFFFFF);
-  static const Color hairline = Color(0xFFF2EEE6);
-  static const Color field = Color(0xFFF0ECDF);
+  static const Color hairline = Color(0xFFF1F0EE);
+  static const Color field = Color(0xFFEEEEEB);
 
   static const Color textSecondary = Color(0xFF5D584D);
   static const Color textMuted = Color(0xFF8C887F);

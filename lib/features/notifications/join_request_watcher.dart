@@ -1,8 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hulaki/app/providers.dart';
+import 'package:hulaki/features/groups/presentation/group_info_screen.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
 
 /// Raises a local notification for each new pending join request to a group
@@ -19,13 +20,16 @@ class JoinRequestWatcher extends ConsumerStatefulWidget {
 class _JoinRequestWatcherState extends ConsumerState<JoinRequestWatcher> {
   static const _interval = Duration(seconds: 25);
   Timer? _timer;
+  StreamSubscription<String>? _tapSub;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(ref.read(localNotificationsProvider).init());
+      final notifications = ref.read(localNotificationsProvider);
+      unawaited(notifications.init());
+      _tapSub = notifications.onTap.listen(_openRequests);
       unawaited(_poll());
       _timer = Timer.periodic(_interval, (_) => unawaited(_poll()));
     });
@@ -34,7 +38,19 @@ class _JoinRequestWatcherState extends ConsumerState<JoinRequestWatcher> {
   @override
   void dispose() {
     _timer?.cancel();
+    unawaited(_tapSub?.cancel());
     super.dispose();
+  }
+
+  void _openRequests(String groupId) {
+    if (!mounted) return;
+    unawaited(
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => GroupInfoScreen(groupId: groupId),
+        ),
+      ),
+    );
   }
 
   Future<void> _poll() async {
@@ -49,6 +65,7 @@ class _JoinRequestWatcherState extends ConsumerState<JoinRequestWatcher> {
           request.requesterName ?? l10n.joinRequestNotifySomeone,
           group.name,
         ),
+        payload: group.id,
       );
     }
   }

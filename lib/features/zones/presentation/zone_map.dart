@@ -91,7 +91,7 @@ class _ZoneMapState extends State<ZoneMap> {
         textField: [Expressions.get, 'name'],
         textSize: 12,
         textColor: '#15181B',
-        textHaloColor: '#F6F4EE',
+        textHaloColor: '#F6F6F4',
         textHaloWidth: 1.4,
         textFont: ['Open Sans Semibold'],
         symbolPlacement: 'point',
