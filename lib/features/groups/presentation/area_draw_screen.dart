@@ -338,7 +338,13 @@ class _AreaDrawScreenState extends State<AreaDrawScreen> {
 
   Future<void> _redraw() async {
     await _controller?.setGeoJsonSource('aoi-verts', _vertices());
-    await _controller?.setGeoJsonSource('aoi-poly', _polygonFeature());
+    // With no points the polygon feature has empty coordinates, which MapLibre
+    // rejects and leaves the previous shape drawn. Push an empty collection so
+    // clearing (or undoing to zero) wipes the map.
+    await _controller?.setGeoJsonSource(
+      'aoi-poly',
+      _points.isEmpty ? _empty() : _polygonFeature(),
+    );
   }
 
   /// A drawn area smaller than this is almost always stray taps, so it is

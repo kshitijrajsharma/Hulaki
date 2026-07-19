@@ -92,6 +92,10 @@
   "@introSkip": {
     "description": "Intro button that enters the app with no sample"
   },
+  "introGotIt": "Got it",
+  "@introGotIt": {
+    "description": "Dismisses the how-it-works refresher opened from the profile"
+  },
   "demoGroupName": "Sample: neighbourhood survey",
   "@demoGroupName": {
     "description": "Name of the seeded tutorial group"

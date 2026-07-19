@@ -63,13 +63,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     _saved();
   }
 
-  /// Re-opens the how-it-works intro for a refresher; both buttons just close.
+  /// Re-opens the how-it-works intro for a refresher, dismissed with one tap.
   Future<void> _replayTutorial() {
     return Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (routeContext) => HowItWorksScreen(
-          onFollowTutorial: () => Navigator.of(routeContext).pop(),
-          onSkip: () => Navigator.of(routeContext).pop(),
+        builder: (routeContext) => HowItWorksScreen.review(
+          onDone: () => Navigator.of(routeContext).pop(),
         ),
       ),
     );

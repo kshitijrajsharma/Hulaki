@@ -40,9 +40,36 @@ translations:
 icons:
     dart run flutter_launcher_icons
 
-# Run the app on the connected device or emulator.
+# Boot an Android emulator (default fieldchat) and wait until it is ready.
+emulator avd="fieldchat":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export PATH="$HOME/Android/Sdk/emulator:$HOME/Android/Sdk/platform-tools:$PATH"
+    if adb devices | grep -q 'emulator-'; then
+        echo "Emulator already running:"; adb devices; exit 0
+    fi
+    log="/tmp/hulaki-emulator-{{avd}}"
+    echo "Booting {{avd}} (logs: $log.out / $log.err)"
+    nohup emulator -avd {{avd}} -no-boot-anim > "$log.out" 2> "$log.err" &
+    adb wait-for-device
+    printf 'Waiting for full boot'
+    until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; do
+        printf '.'; sleep 2
+    done
+    echo; echo "{{avd}} is ready:"; adb devices
+
+# Run the app on the connected device or emulator, with Supabase config from .env.
 run:
-    flutter run
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ -f .env ] && source .env
+    flutter run \
+        ${SUPABASE_URL:+--dart-define=SUPABASE_URL="$SUPABASE_URL"} \
+        ${SUPABASE_ANON_KEY:+--dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"}
+
+# Boot the emulator (if needed) then run the app.
+dev avd="fieldchat": (emulator avd)
+    @just run
 
 # Bump the version from conventional commits: updates pubspec and CHANGELOG,
 # then commits and tags. Runs the whole release chore in one step.

@@ -25,9 +25,13 @@ Future<String> seedDemoGroup(
         GroupsCompanion.insert(
           id: groupId,
           name: l10n.demoGroupName,
-          createdBy: userId,
+          // A sample profile owns the group so the newcomer experiences it as a
+          // member (fewer controls), while member export stays on so the
+          // tutorial can still show exporting the data.
+          createdBy: 'demo-ashi',
           encKey: base64Encode(await GroupCipher.generateKey()),
           isSample: const Value(true),
+          allowMemberExport: const Value(true),
         ),
       );
 
@@ -71,16 +75,23 @@ Future<String> seedDemoGroup(
         ProfilesCompanion.insert(id: userId, phone: ''),
         mode: InsertMode.insertOrIgnore,
       );
-  await db
-      .into(db.groupMembers)
-      .insert(
-        GroupMembersCompanion.insert(
-          groupId: groupId,
-          profileId: userId,
-          role: const Value('admin'),
-        ),
-        mode: InsertMode.insertOrReplace,
-      );
+  final memberRoles = {
+    'demo-ashi': 'admin',
+    'demo-bishe': 'member',
+    userId: 'member',
+  };
+  for (final entry in memberRoles.entries) {
+    await db
+        .into(db.groupMembers)
+        .insert(
+          GroupMembersCompanion.insert(
+            groupId: groupId,
+            profileId: entry.key,
+            role: Value(entry.value),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+  }
 
   // One point carries a real photo; the rest are text, to keep the sample tiny.
   final mediaId = uuid.v4();

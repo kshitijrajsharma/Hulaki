@@ -11,13 +11,23 @@ class HowItWorksScreen extends StatelessWidget {
     required this.onFollowTutorial,
     required this.onSkip,
     super.key,
-  });
+  }) : review = false;
+
+  /// Reopened from the profile as a refresher: no sample to seed, so it shows a
+  /// single dismiss action instead of the follow/skip choice.
+  const HowItWorksScreen.review({required VoidCallback onDone, super.key})
+    : onFollowTutorial = onDone,
+      onSkip = onDone,
+      review = true;
 
   /// Seeds the sample group and enters the app.
   final VoidCallback onFollowTutorial;
 
   /// Enters the app with no sample.
   final VoidCallback onSkip;
+
+  /// Refresher mode reached from the profile; hides the onboarding choice.
+  final bool review;
 
   @override
   Widget build(BuildContext context) {
@@ -67,18 +77,25 @@ class HowItWorksScreen extends StatelessWidget {
                 body: l10n.introStep4Body,
               ),
               const Spacer(),
-              PrimaryButton(
-                label: l10n.introFollowTutorial,
-                onPressed: onFollowTutorial,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              TextButton(
-                onPressed: onSkip,
-                child: Text(
-                  l10n.introSkip,
-                  style: const TextStyle(color: AppColors.textMuted),
+              if (review)
+                PrimaryButton(
+                  label: l10n.introGotIt,
+                  onPressed: onFollowTutorial,
+                )
+              else ...[
+                PrimaryButton(
+                  label: l10n.introFollowTutorial,
+                  onPressed: onFollowTutorial,
                 ),
-              ),
+                const SizedBox(height: AppSpacing.xs),
+                TextButton(
+                  onPressed: onSkip,
+                  child: Text(
+                    l10n.introSkip,
+                    style: const TextStyle(color: AppColors.textMuted),
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.md),
             ],
           ),
