@@ -12,6 +12,13 @@ abstract interface class AuthRepository {
     required String username,
   });
 
+  /// Overwrites both the device id and username from a recovery bundle, so a
+  /// restored install carries the account's original sender identity.
+  Future<Session> restoreSession({
+    required String userId,
+    required String username,
+  });
+
   /// The persisted session, or null when no username has been chosen yet.
   Future<Session?> currentSession();
 

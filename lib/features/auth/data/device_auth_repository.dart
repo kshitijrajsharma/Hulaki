@@ -34,6 +34,16 @@ class DeviceAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<Session> restoreSession({
+    required String userId,
+    required String username,
+  }) async {
+    await _prefs.setString(_userIdKey, userId);
+    await _prefs.setString(_usernameKey, username);
+    return Session(userId: userId, username: username);
+  }
+
+  @override
   Future<Session?> currentSession() async {
     final userId = _prefs.getString(_userIdKey);
     final username = _prefs.getString(_usernameKey);

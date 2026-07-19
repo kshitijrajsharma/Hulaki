@@ -491,6 +491,17 @@ class LocalDatabase extends _$LocalDatabase {
   Future<Group?> groupById(String id) =>
       (select(groups)..where((g) => g.id.equals(id))).getSingleOrNull();
 
+  /// This member's role in a group, or null if not a member. Used to record the
+  /// role in a recovery backup.
+  Future<String?> groupRoleFor(String groupId, String userId) async {
+    final row =
+        await (select(groupMembers)..where(
+              (m) => m.groupId.equals(groupId) & m.profileId.equals(userId),
+            ))
+            .getSingleOrNull();
+    return row?.role;
+  }
+
   Stream<Group?> watchGroupById(String id) =>
       (select(groups)..where((g) => g.id.equals(id))).watchSingleOrNull();
 

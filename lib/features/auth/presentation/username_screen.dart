@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import 'package:hulaki/design/widgets/primary_button.dart';
 import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/auth/data/auth_repository.dart';
 import 'package:hulaki/features/auth/domain/username.dart';
+import 'package:hulaki/features/recovery/presentation/restore_screen.dart';
 import 'package:hulaki/features/settings/language_picker.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
 
@@ -128,7 +131,21 @@ class _UsernameScreenState extends ConsumerState<UsernameScreen> {
                 loading: _busy,
                 onPressed: _busy ? null : _submit,
               ),
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.xs),
+              TextButton(
+                onPressed: () => unawaited(
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const RestoreScreen(),
+                    ),
+                  ),
+                ),
+                child: Text(
+                  l10n.restoreLink,
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
         ),

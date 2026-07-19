@@ -20,6 +20,9 @@ import 'package:hulaki/features/identity/device_identity_store.dart';
 import 'package:hulaki/features/identity/identity_crypto.dart';
 import 'package:hulaki/features/notifications/join_request_poller.dart';
 import 'package:hulaki/features/notifications/local_notifications.dart';
+import 'package:hulaki/features/recovery/backup_crypto.dart';
+import 'package:hulaki/features/recovery/backup_store.dart';
+import 'package:hulaki/features/recovery/recovery_service.dart';
 import 'package:hulaki/features/sync/blob_store.dart';
 import 'package:hulaki/features/sync/in_memory_transport.dart';
 import 'package:hulaki/features/sync/message_transport.dart';
@@ -74,6 +77,24 @@ final joinRequestPollerProvider = Provider<JoinRequestPoller>((ref) {
     seen: SeenRequestStore(ref.watch(sharedPreferencesProvider)),
   );
 });
+
+/// Stores the encrypted account backup. In-memory by default; swapped for the
+/// Supabase-backed store from main when the project credentials are wired.
+final backupStoreProvider = Provider<BackupStore>(
+  (ref) => InMemoryBackupStore(),
+);
+
+final backupCryptoProvider = Provider<BackupCrypto>((ref) => BackupCrypto());
+
+final recoveryServiceProvider = Provider<RecoveryService>(
+  (ref) => RecoveryService(
+    crypto: ref.watch(backupCryptoProvider),
+    store: ref.watch(backupStoreProvider),
+    db: ref.watch(databaseProvider),
+    auth: ref.watch(authRepositoryProvider),
+    seedStore: DeviceIdentityStore(const FlutterSecureStorage()),
+  ),
+);
 
 /// The server-readable admin set. In-memory today; swapped for the
 /// Supabase-backed registry once the project credentials are wired.

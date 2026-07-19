@@ -182,3 +182,25 @@ alter table public.group_admins enable row level security;
 -- writes with the service role, so a member cannot enrol itself as admin.
 create policy group_admins_select on public.group_admins
   for select to authenticated using (true);
+
+-- Encrypted account backups, one row per recovery key. The row holds only
+-- ciphertext plus the data key wrapped to the recovery key, so the server never
+-- sees the identity seeds, the group keys, or the recovery key. lookup_id is
+-- derived from the recovery key (unguessable) so a fresh install fetches its own
+-- row without an account.
+create table if not exists public.identity_backups (
+  lookup_id       text primary key,
+  ciphertext      text not null,
+  key_wrapped_key text not null,
+  updated_at      timestamptz not null default now()
+);
+
+-- RLS on with no client policy: clients can neither read nor write this table.
+-- All access goes through the group-guard function (service role), which acts
+-- only on the exact lookup id presented, so the table cannot be enumerated or
+-- bulk-deleted. Confidentiality still rests on the end-to-end encryption; this
+-- adds integrity and availability by removing direct client access.
+alter table public.identity_backups enable row level security;
+
+drop policy if exists identity_backups_select on public.identity_backups;
+drop policy if exists identity_backups_write on public.identity_backups;

@@ -924,8 +924,12 @@
   "@joinRequestNotifyBody": {
     "description": "Notification body naming the requester and the group",
     "placeholders": {
-      "name": {"type": "String"},
-      "group": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "group": {
+        "type": "String"
+      }
     }
   },
   "joinRequestNotifySomeone": "Someone",
@@ -1949,5 +1953,85 @@
   "shareWebUpdatedLabel": "Updated",
   "@shareWebUpdatedLabel": {
     "description": "Prefix on a link's date when its data was refreshed"
+  },
+  "backupTitle": "Back up account",
+  "@backupTitle": {
+    "description": "Title of the account backup screen"
+  },
+  "backupHeading": "Your recovery key",
+  "@backupHeading": {
+    "description": "Heading above the recovery key"
+  },
+  "backupBody": "Save this key somewhere safe, ideally a password manager. It is the only way to recover your account, and anyone who has it can open your account.",
+  "@backupBody": {
+    "description": "Explains what the recovery key is and to keep it private"
+  },
+  "backupCopy": "Copy key",
+  "@backupCopy": {
+    "description": "Copy the recovery key"
+  },
+  "backupCopied": "Recovery key copied",
+  "@backupCopied": {
+    "description": "Snackbar after copying the recovery key"
+  },
+  "backupShare": "Save as file",
+  "@backupShare": {
+    "description": "Save the recovery key as a file via the share sheet"
+  },
+  "backupShowQr": "Show QR code",
+  "@backupShowQr": {
+    "description": "Show the recovery key as a QR code"
+  },
+  "backupSaved": "I've saved it",
+  "@backupSaved": {
+    "description": "Confirms the user saved the recovery key"
+  },
+  "backupFailed": "Could not create the backup. Please try again.",
+  "@backupFailed": {
+    "description": "Shown when creating the backup fails"
+  },
+  "restoreTitle": "Restore account",
+  "@restoreTitle": {
+    "description": "Title of the account restore screen"
+  },
+  "restoreHeading": "Enter your recovery key",
+  "@restoreHeading": {
+    "description": "Heading on the restore screen"
+  },
+  "restoreBody": "Type or paste the recovery key you saved when you backed up your account.",
+  "@restoreBody": {
+    "description": "Instruction to enter the recovery key"
+  },
+  "restoreHint": "Recovery key",
+  "@restoreHint": {
+    "description": "Placeholder in the recovery key field"
+  },
+  "restoreButton": "Restore",
+  "@restoreButton": {
+    "description": "Restore action button"
+  },
+  "restoreInvalid": "This recovery key is not valid.",
+  "@restoreInvalid": {
+    "description": "Error when the recovery key is malformed or wrong"
+  },
+  "restoreNotFound": "No backup found for this key.",
+  "@restoreNotFound": {
+    "description": "Error when no backup exists for the key"
+  },
+  "meBackUp": "Backup",
+  "@meBackUp": {
+    "description": "Me tab row that opens the account backup"
+  },
+  "meBackUpSubtitle": "Back up your account",
+  "@meBackUpSubtitle": {
+    "description": "Subtitle for the backup row before backing up"
+  },
+  "meBackedUp": "Backed up. Keep your recovery key safe.",
+  "@meBackedUp": {
+    "description": "Subtitle for the backup row after backing up"
+  },
+  "restoreLink": "Restore an account",
+  "@restoreLink": {
+    "description": "Link on the username screen to restore an existing account"
   }
 }

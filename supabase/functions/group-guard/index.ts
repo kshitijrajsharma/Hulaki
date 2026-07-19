@@ -9,6 +9,11 @@
 //   - delete-envelope: the message author or a group admin may delete.
 //   - delete-listing / edit-listing: only a group admin may change the public
 //     directory row.
+//   - backup-get / backup-put: read or upsert one encrypted account backup by
+//     its key-derived lookup id. Unsigned: a restoring device has only the
+//     recovery key (the identity is sealed in the bundle), so knowing the
+//     lookup id is the authorisation. Each call touches one exact id, so the
+//     table cannot be listed or bulk-deleted through this function.
 //
 // Writes use the service role, so clients hold no direct delete or update
 // rights once the RLS policies are tightened. It never reads message content;
@@ -240,6 +245,39 @@ async function editListing(body: Record<string, unknown>): Promise<Response> {
   return json(200, { ok: true });
 }
 
+// backup-get|lookup_id: returns one encrypted backup, or {found:false}. A
+// missing row is a normal 200 so the client need not treat 404 as an error.
+async function backupGet(body: Record<string, unknown>): Promise<Response> {
+  const lookupId = body.lookup_id as string;
+  if (!lookupId) return json(400, { error: "missing lookup_id" });
+  const { data, error } = await admin
+    .from("identity_backups")
+    .select("lookup_id, ciphertext, key_wrapped_key")
+    .eq("lookup_id", lookupId)
+    .maybeSingle();
+  if (error) return json(500, { error: error.message });
+  if (!data) return json(200, { found: false });
+  return json(200, { found: true, ...data });
+}
+
+// backup-put|lookup_id: upserts one encrypted backup by its lookup id.
+async function backupPut(body: Record<string, unknown>): Promise<Response> {
+  const lookupId = body.lookup_id as string;
+  const ciphertext = body.ciphertext as string;
+  const keyWrappedKey = body.key_wrapped_key as string;
+  if (!lookupId || !ciphertext || !keyWrappedKey) {
+    return json(400, { error: "incomplete backup" });
+  }
+  const { error } = await admin.from("identity_backups").upsert({
+    lookup_id: lookupId,
+    ciphertext,
+    key_wrapped_key: keyWrappedKey,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "lookup_id" });
+  if (error) return json(500, { error: error.message });
+  return json(200, { ok: true });
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "method not allowed" });
   let body: Record<string, unknown>;
@@ -259,6 +297,10 @@ Deno.serve(async (req) => {
       return await deleteListing(body);
     case "edit-listing":
       return await editListing(body);
+    case "backup-get":
+      return await backupGet(body);
+    case "backup-put":
+      return await backupPut(body);
     default:
       return json(400, { error: "unknown action" });
   }
