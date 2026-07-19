@@ -1,3 +1,9 @@
+## v0.0.22 (2026-07-19)
+
+### Fix
+
+- **color**: fix color scheme across app
+
 ## v0.0.21 (2026-07-19)
 
 ### Fix
