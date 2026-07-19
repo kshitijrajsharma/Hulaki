@@ -1,3 +1,9 @@
+## v0.0.23 (2026-07-19)
+
+### Fix
+
+- **snackbar**: fixes the color of snackbars with success and failure
+
 ## v0.0.22 (2026-07-19)
 
 ### Fix
