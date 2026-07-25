@@ -53,6 +53,42 @@ void main() {
     expect(message.headingDeg, 47);
   });
 
+  test("tagUsageFor counts a member's tags and their last use", () async {
+    await db
+        .into(db.groups)
+        .insert(
+          GroupsCompanion.insert(
+            id: 'g1',
+            name: 'Ward 7',
+            createdBy: 'me',
+            encKey: 'k',
+          ),
+        );
+    Future<void> send(String id, String sender, String? tag, DateTime at) => db
+        .into(db.messages)
+        .insert(
+          MessagesCompanion.insert(
+            id: id,
+            groupId: 'g1',
+            senderId: sender,
+            kind: 'text',
+            createdAt: at,
+            tagId: Value(tag),
+          ),
+        );
+    await send('a', 'me', 'parking', DateTime(2026, 1, 10));
+    await send('b', 'me', 'parking', DateTime(2026, 1, 12));
+    await send('c', 'me', 'pole', DateTime(2026, 1, 11));
+    await send('d', 'me', null, DateTime(2026, 1, 13));
+    await send('e', 'other', 'pole', DateTime(2026, 1, 14));
+
+    final usage = await db.tagUsageFor('g1', 'me');
+    expect(usage.keys.toSet(), {'parking', 'pole'});
+    expect(usage['parking']!.count, 2);
+    expect(usage['parking']!.lastUsed, DateTime(2026, 1, 12));
+    expect(usage['pole']!.count, 1);
+  });
+
   test('watchMembersFor lists admins first with profile names', () async {
     await db
         .into(db.groups)

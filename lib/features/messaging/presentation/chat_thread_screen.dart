@@ -72,6 +72,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   final _scrollController = ScrollController();
   final _picker = ImagePicker();
   String? _selectedTagId;
+  Map<String, ({int count, DateTime lastUsed})>? _tagUsage;
   bool _sending = false;
   Uint8List? _pendingPhoto;
   StagedPoint? _stagedPoint;
@@ -119,6 +120,39 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       },
     );
     unawaited(_catchUpAndRepublish());
+    unawaited(_loadTagUsage());
+  }
+
+  /// Snapshots this member's tag usage once, when the thread opens, so the tag
+  /// row settles on an order and does not shuffle between taps.
+  Future<void> _loadTagUsage() async {
+    final usage = await ref
+        .read(databaseProvider)
+        .tagUsageFor(widget.groupId, ref.read(currentUserIdProvider));
+    if (mounted) setState(() => _tagUsage = usage);
+  }
+
+  /// Floats the member's most-used tags to the front, recency breaking ties,
+  /// keeping the group order for tags they have not used.
+  List<HotKey> _orderByUsage(List<HotKey> keys) {
+    final usage = _tagUsage;
+    if (usage == null) return keys;
+    final indexed = [for (var i = 0; i < keys.length; i++) (i, keys[i])]
+      ..sort((a, b) {
+        final ua = usage[a.$2.id];
+        final ub = usage[b.$2.id];
+        if (ua != null && ub != null) {
+          final byCount = ub.count.compareTo(ua.count);
+          if (byCount != 0) return byCount;
+          final byRecent = ub.lastUsed.compareTo(ua.lastUsed);
+          if (byRecent != 0) return byRecent;
+          return a.$1.compareTo(b.$1);
+        }
+        if (ua != null) return -1;
+        if (ub != null) return 1;
+        return a.$1.compareTo(b.$1);
+      });
+    return [for (final e in indexed) e.$2];
   }
 
   void _onScroll() {
@@ -591,7 +625,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     // tag row and composer stay on screen instead of overflowing.
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final messages = ref.watch(messagesProvider(widget.groupId));
-    final hotKeys = ref.watch(hotKeysProvider(widget.groupId)).value ?? [];
+    final hotKeys = _orderByUsage(
+      ref.watch(hotKeysProvider(widget.groupId)).value ?? const [],
+    );
     final hotKeysById = {for (final h in hotKeys) h.id: h};
     final me = ref.watch(currentUserIdProvider);
     final isSyncing =

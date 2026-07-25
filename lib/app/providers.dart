@@ -27,6 +27,7 @@ import 'package:hulaki/features/sync/blob_store.dart';
 import 'package:hulaki/features/sync/in_memory_transport.dart';
 import 'package:hulaki/features/sync/message_transport.dart';
 import 'package:hulaki/features/sync/sync_service.dart';
+import 'package:hulaki/features/track/track_recording_controller.dart';
 import 'package:hulaki/features/zones/domain/zone.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -139,6 +140,20 @@ final currentUserIdProvider = Provider<String>((ref) {
   final state = ref.watch(authControllerProvider);
   if (state is AuthSignedIn) return state.session.userId;
   throw StateError('No signed-in user');
+});
+
+/// The app-level breadcrumb recorder, alive across screens and backgrounding so
+/// the trail keeps building when minimised. Started by the map once location
+/// permission is granted and managed by the track recording watcher.
+final trackRecordingControllerProvider = Provider<TrackRecordingController>((
+  ref,
+) {
+  final controller = TrackRecordingController(
+    db: ref.watch(databaseProvider),
+    ownerId: ref.watch(currentUserIdProvider),
+  );
+  ref.onDispose(() => unawaited(controller.stop()));
+  return controller;
 });
 
 final syncServiceProvider = Provider<SyncService>((ref) {

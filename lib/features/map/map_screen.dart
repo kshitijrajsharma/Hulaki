@@ -11,7 +11,6 @@ import 'package:hulaki/app/providers.dart';
 import 'package:hulaki/data/local/database.dart';
 import 'package:hulaki/data/local/database_provider.dart';
 import 'package:hulaki/design/app_colors.dart';
-import 'package:hulaki/features/capture/gps_gate.dart';
 import 'package:hulaki/features/capture/location_permission.dart';
 import 'package:hulaki/features/capture/presentation/live_gps_strip.dart';
 import 'package:hulaki/features/capture/staged_point.dart';
@@ -21,7 +20,6 @@ import 'package:hulaki/features/map/map_tap_sheet.dart';
 import 'package:hulaki/features/map/marker_images.dart';
 import 'package:hulaki/features/map/point_sheet.dart';
 import 'package:hulaki/features/onboarding/coach_tip.dart';
-import 'package:hulaki/features/track/track_recorder.dart';
 import 'package:hulaki/features/zones/domain/zone.dart';
 import 'package:hulaki/features/zones/presentation/zone_picker_sheet.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
@@ -99,7 +97,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   MapLibreMapController? _controller;
   StreamSubscription<Position>? _positionSub;
-  TrackRecorder? _tracker;
   bool _sourcesReady = false;
   bool _styledOnce = false;
   bool _paintedOnce = false;
@@ -151,7 +148,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _startTracking() async {
     if (!await ensureLocationPermission()) return;
-    _tracker = TrackRecorder(ref.read(databaseProvider));
+    // Recording lives in the app-level controller so the trail keeps building
+    // when the app is backgrounded; the map only reads and draws it.
+    await ref.read(trackRecordingControllerProvider).start();
     _positionSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(distanceFilter: 5),
     ).listen(_onPosition);
@@ -159,20 +158,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _onPosition(Position position) async {
     if (!mounted) return;
-    final stored = await _tracker?.record(
-      ownerId: ref.read(currentUserIdProvider),
-      fix: GpsFix(
-        lat: position.latitude,
-        lng: position.longitude,
-        accuracyM: position.accuracy,
-      ),
-      at: DateTime.now(),
-    );
     _updateLocation(position.latitude, position.longitude);
     if (!mounted || !_sourcesReady) return;
-    if (stored ?? false) {
-      await _controller?.setGeoJsonSource('track', await _trackLine());
-    }
+    await _controller?.setGeoJsonSource('track', await _trackLine());
   }
 
   /// Records the latest fix for the recenter button. Fed by both the position

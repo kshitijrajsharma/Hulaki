@@ -517,6 +517,31 @@ class LocalDatabase extends _$LocalDatabase {
             ..orderBy([(h) => OrderingTerm(expression: h.position)]))
           .watch();
 
+  /// Per-tag usage for one member in a group: how many points they sent with
+  /// each tag and when they last used it. Drives that member's tag ordering.
+  Future<Map<String, ({int count, DateTime lastUsed})>> tagUsageFor(
+    String groupId,
+    String userId,
+  ) async {
+    final count = messages.id.count();
+    final lastUsed = messages.createdAt.max();
+    final query = selectOnly(messages)
+      ..addColumns([messages.tagId, count, lastUsed])
+      ..where(
+        messages.groupId.equals(groupId) &
+            messages.senderId.equals(userId) &
+            messages.tagId.isNotNull(),
+      )
+      ..groupBy([messages.tagId]);
+    return {
+      for (final row in await query.get())
+        row.read(messages.tagId)!: (
+          count: row.read(count)!,
+          lastUsed: row.read(lastUsed)!,
+        ),
+    };
+  }
+
   /// The group roster joined with profiles, admins first then by join time.
   Stream<List<GroupMemberView>> watchMembersFor(String groupId) {
     final query =

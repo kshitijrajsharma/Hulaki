@@ -11,6 +11,7 @@ import 'package:hulaki/features/notifications/join_request_watcher.dart';
 import 'package:hulaki/features/onboarding/onboarding_gate.dart';
 import 'package:hulaki/features/onboarding/splash_screen.dart';
 import 'package:hulaki/features/recovery/presentation/backup_watcher.dart';
+import 'package:hulaki/features/track/track_recording_watcher.dart';
 
 /// Routes the top of the tree on auth state: splash while restoring,
 /// onboarding when signed out, the shell when signed in.
@@ -28,7 +29,9 @@ class AuthGate extends ConsumerWidget {
           child: DeepLinkWatcher(
             child: JoinRequestWatcher(
               child: BackupWatcher(
-                child: OnboardingGate(child: AppShell()),
+                child: TrackRecordingWatcher(
+                  child: OnboardingGate(child: AppShell()),
+                ),
               ),
             ),
           ),
