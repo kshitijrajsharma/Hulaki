@@ -771,14 +771,16 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           if (!keyboardOpen && isSample)
             _SampleBanner(onRemove: () => unawaited(_removeSample()))
           else if (!keyboardOpen && !isSample) ...[
-            CoachTip(
-              tipKey: 'thread',
-              message: l10n.threadCoachTapTag,
-            ),
-            CoachTip(
-              tipKey: 'thread-sync',
-              message: l10n.threadCoachPullToRefresh,
-            ),
+            if (pointCount == 0)
+              CoachTip(
+                tipKey: 'thread',
+                message: l10n.threadCoachTapTag,
+              )
+            else
+              CoachTip(
+                tipKey: 'thread-sync',
+                message: l10n.threadCoachPullToRefresh,
+              ),
           ],
           Expanded(
             child: Stack(

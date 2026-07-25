@@ -26,6 +26,19 @@ void main() {
     expect(crypto.isValidKey(key.toLowerCase()), isTrue);
   });
 
+  test('a key saved to and read from a file round-trips', () async {
+    final key = await crypto.generateKey();
+    // A saved file carries the grouped key; reading it back adds a trailing
+    // newline that trimming and normalisation must tolerate.
+    final fromFile = '$key\n';
+    expect(crypto.isValidKey(fromFile.trim()), isTrue);
+    final backup = await crypto.encrypt(sampleBundle().toBytes(), key: key);
+    final restored = RecoveryBundle.fromBytes(
+      await crypto.decrypt(backup, key: fromFile.trim()),
+    );
+    expect(restored.username, 'ward7mapper');
+  });
+
   test('the identity key is deterministic and unique to the seeds', () async {
     final signing = List<int>.filled(32, 1);
     final agreement = List<int>.filled(32, 2);

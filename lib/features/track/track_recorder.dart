@@ -6,12 +6,17 @@ import 'package:hulaki/features/capture/gps_gate.dart';
 /// meaningful distance from the last one, so a stationary phone does not fill
 /// the trail. The bar is the larger of [minDistanceM] and the fix's own
 /// accuracy, so a wandering fix in poor signal reads as noise, not movement.
-/// Reading the trail purges anything older than 24 hours.
+/// Reading the trail purges anything older than [retention].
 class TrackRecorder {
-  TrackRecorder(this._db, {this.minDistanceM = 10});
+  TrackRecorder(
+    this._db, {
+    this.minDistanceM = 10,
+    this.retention = const Duration(hours: 24),
+  });
 
   final LocalDatabase _db;
   final double minDistanceM;
+  final Duration retention;
 
   double? _lastLat;
   double? _lastLng;
@@ -49,13 +54,13 @@ class TrackRecorder {
     return true;
   }
 
-  /// The trail to draw: points from the last 24 hours, oldest first. Older
-  /// points are purged first.
+  /// The trail to draw: points within [retention], oldest first. Older points
+  /// are purged first.
   Future<List<TrackPoint>> visibleTrack({
     required String ownerId,
     required DateTime now,
   }) async {
-    final cutoff = now.subtract(const Duration(hours: 24));
+    final cutoff = now.subtract(retention);
     await _db.purgeTrackBefore(ownerId, cutoff);
     return _db.trackSince(ownerId, cutoff);
   }

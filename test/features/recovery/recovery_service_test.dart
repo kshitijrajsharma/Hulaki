@@ -122,6 +122,10 @@ void main() {
     expect((await dbB.groupById('g1'))?.encKey, encKey);
     expect(await dbB.groupRoleFor('g1', 'user-a'), 'admin');
 
+    // The restored profile carries the username, so the member list and point
+    // author show the name rather than the raw sender id.
+    expect((await dbB.profileById('user-a'))?.displayName, 'ward7');
+
     await dbA.close();
     await dbB.close();
   });

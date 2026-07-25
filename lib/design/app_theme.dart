@@ -28,6 +28,14 @@ ThemeData buildAppTheme() {
       scrolledUnderElevation: 0.5,
       centerTitle: false,
     ),
+    // Faint, light-weight hints so placeholder text never reads as a value the
+    // user already entered.
+    inputDecorationTheme: const InputDecorationTheme(
+      hintStyle: TextStyle(
+        color: AppColors.textFaint,
+        fontWeight: FontWeight.w400,
+      ),
+    ),
     dividerTheme: const DividerThemeData(
       color: AppColors.hairline,
       thickness: 1,

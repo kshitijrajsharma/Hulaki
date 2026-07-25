@@ -152,7 +152,7 @@
   "@chatsNoGroupsYet": {
     "description": "Empty state title on the chats list"
   },
-  "chatsEmptyStateBody": "Start a mapping group, or join one a teammate shared.",
+  "chatsEmptyStateBody": "Start a mapping group, or join one shared by a teammate.",
   "@chatsEmptyStateBody": {
     "description": "Empty state body on the chats list"
   },
@@ -204,6 +204,10 @@
   "@meSectionUnits": {
     "description": "Section header for measurement unit settings"
   },
+  "meSectionAccount": "ACCOUNT",
+  "@meSectionAccount": {
+    "description": "Section header for account and recovery settings"
+  },
   "meSectionPrivacy": "PRIVACY",
   "@meSectionPrivacy": {
     "description": "Section header for privacy settings"
@@ -251,6 +255,23 @@
   "meRunInBackgroundSubtitle": "Keep mapping with the screen off. A notification shows the live GPS accuracy.",
   "@meRunInBackgroundSubtitle": {
     "description": "Toggle subtitle explaining background mapping"
+  },
+  "meTrailHistory": "Trail history",
+  "@meTrailHistory": {
+    "description": "Title for the setting choosing how long the background trail is kept"
+  },
+  "meTrailHistoryHelper": "Longer history uses more storage, about 1 MB per day of mapping.",
+  "@meTrailHistoryHelper": {
+    "description": "Helper text warning about storage used by a longer trail"
+  },
+  "meTrailDays": "{days, plural, =1{24 h} other{{days} days}}",
+  "@meTrailDays": {
+    "description": "Label for a trail retention choice in days",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
   },
   "meNoAreasSaved": "No areas saved yet. Open a group, then “Make available offline”.",
   "@meNoAreasSaved": {
@@ -1974,13 +1995,13 @@
   "@backupCopied": {
     "description": "Snackbar after copying the recovery key"
   },
-  "backupShare": "Save as file",
-  "@backupShare": {
-    "description": "Save the recovery key as a file via the share sheet"
+  "backupSaveToFile": "Save as file",
+  "@backupSaveToFile": {
+    "description": "Save the recovery key to a file the user chooses"
   },
-  "backupShowQr": "Show QR code",
-  "@backupShowQr": {
-    "description": "Show the recovery key as a QR code"
+  "backupSavedToFile": "Recovery key saved",
+  "@backupSavedToFile": {
+    "description": "Snackbar after saving the recovery key to a file"
   },
   "backupSaved": "I've saved it",
   "@backupSaved": {
@@ -1998,9 +2019,17 @@
   "@restoreHeading": {
     "description": "Heading on the restore screen"
   },
-  "restoreBody": "Type or paste the recovery key you saved when you backed up your account.",
+  "restoreBody": "Paste the recovery key you saved, or import the backup file.",
   "@restoreBody": {
     "description": "Instruction to enter the recovery key"
+  },
+  "restoreImportFile": "Import from file",
+  "@restoreImportFile": {
+    "description": "Restore the account from a saved backup file"
+  },
+  "restoreFileUnreadable": "Could not read that file.",
+  "@restoreFileUnreadable": {
+    "description": "Error when the picked backup file cannot be read"
   },
   "restoreHint": "Recovery key",
   "@restoreHint": {

@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hulaki/app/providers.dart';
 import 'package:hulaki/design/app_colors.dart';
@@ -29,6 +31,27 @@ class _RestoreScreenState extends ConsumerState<RestoreScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Loads a saved backup file into the key field and restores from it. A
+  /// cancelled picker returns null and is a no-op.
+  Future<void> _importFromFile(AppLocalizations l10n) async {
+    final path = await FlutterFileDialog.pickFile(
+      params: const OpenFileDialogParams(
+        fileExtensionsFilter: ['txt'],
+        mimeTypesFilter: ['text/plain'],
+      ),
+    );
+    if (path == null) return;
+    final String contents;
+    try {
+      contents = await File(path).readAsString();
+    } on FileSystemException {
+      if (mounted) setState(() => _error = l10n.restoreFileUnreadable);
+      return;
+    }
+    _controller.text = contents.trim();
+    if (mounted) await _restore(l10n);
   }
 
   Future<void> _restore(AppLocalizations l10n) async {
@@ -124,6 +147,20 @@ class _RestoreScreenState extends ConsumerState<RestoreScreen> {
                       ),
                     ),
                   ],
+                  const SizedBox(height: AppSpacing.sm),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _restoring
+                          ? null
+                          : () => unawaited(_importFromFile(l10n)),
+                      icon: const Icon(Icons.upload_file, size: 20),
+                      label: Text(l10n.restoreImportFile),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.ink,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

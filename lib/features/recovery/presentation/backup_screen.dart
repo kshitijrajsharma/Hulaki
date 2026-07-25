@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hulaki/app/providers.dart';
 import 'package:hulaki/design/app_colors.dart';
@@ -11,8 +13,6 @@ import 'package:hulaki/design/widgets/primary_button.dart';
 import 'package:hulaki/features/auth/application/auth_providers.dart';
 import 'package:hulaki/features/auth/application/auth_state.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:share_plus/share_plus.dart';
 
 /// Shows a freshly generated recovery key once, after uploading the encrypted
 /// backup. The key is the only way to restore the account, so it is never
@@ -130,16 +130,9 @@ class _KeyView extends StatelessWidget {
                 },
               ),
               _Action(
-                icon: Icons.ios_share,
-                label: l10n.backupShare,
-                onTap: () => unawaited(
-                  SharePlus.instance.share(ShareParams(text: recoveryKey)),
-                ),
-              ),
-              _Action(
-                icon: Icons.qr_code_2,
-                label: l10n.backupShowQr,
-                onTap: () => unawaited(_showQr(context, recoveryKey, l10n)),
+                icon: Icons.save_alt,
+                label: l10n.backupSaveToFile,
+                onTap: () => unawaited(_saveToFile(context, l10n)),
               ),
             ],
           ),
@@ -155,25 +148,19 @@ class _KeyView extends StatelessWidget {
     );
   }
 
-  Future<void> _showQr(
-    BuildContext context,
-    String key,
-    AppLocalizations l10n,
-  ) {
-    return showDialog<void>(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: AppColors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: QrImageView(
-            data: key,
-            size: 240,
-            backgroundColor: AppColors.white,
-          ),
-        ),
+  /// Writes the recovery key to a text file the user places through the native
+  /// save dialog. A cancelled dialog returns null and is a no-op.
+  Future<void> _saveToFile(BuildContext context, AppLocalizations l10n) async {
+    final saved = await FlutterFileDialog.saveFile(
+      params: SaveFileDialogParams(
+        data: Uint8List.fromList(utf8.encode(recoveryKey)),
+        fileName: 'hulaki-recovery-key.txt',
+        mimeTypesFilter: const ['text/plain'],
       ),
     );
+    if (saved != null && context.mounted) {
+      context.showInfo(l10n.backupSavedToFile);
+    }
   }
 }
 

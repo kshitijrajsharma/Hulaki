@@ -87,12 +87,13 @@ class RecoveryService {
       userId: bundle.senderId,
       username: bundle.username,
     );
-    await db
-        .into(db.profiles)
-        .insert(
-          ProfilesCompanion.insert(id: bundle.senderId, phone: ''),
-          mode: InsertMode.insertOrIgnore,
-        );
+    await db.upsertProfile(
+      ProfilesCompanion.insert(
+        id: bundle.senderId,
+        phone: '',
+        displayName: Value(bundle.username),
+      ),
+    );
     for (final group in bundle.groups) {
       await _reattach(group, bundle.senderId);
     }

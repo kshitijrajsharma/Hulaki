@@ -98,4 +98,24 @@ void main() {
     final trail = await recorder.visibleTrack(ownerId: 'me', now: now);
     expect(trail.length, 1);
   });
+
+  test('a longer retention keeps points the default would purge', () async {
+    final recorder = TrackRecorder(db, retention: const Duration(days: 2));
+    final now = DateTime(2026, 6, 30, 12);
+
+    await db
+        .into(db.trackPoints)
+        .insert(
+          TrackPointsCompanion.insert(
+            ownerId: 'me',
+            lat: 1,
+            lng: 2,
+            accuracyM: 5,
+            recordedAt: now.subtract(const Duration(hours: 25)),
+          ),
+        );
+
+    final trail = await recorder.visibleTrack(ownerId: 'me', now: now);
+    expect(trail.length, 1);
+  });
 }

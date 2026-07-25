@@ -20,6 +20,8 @@ import 'package:hulaki/features/map/map_tap_sheet.dart';
 import 'package:hulaki/features/map/marker_images.dart';
 import 'package:hulaki/features/map/point_sheet.dart';
 import 'package:hulaki/features/onboarding/coach_tip.dart';
+import 'package:hulaki/features/settings/track_retention_provider.dart';
+import 'package:hulaki/features/track/track_recorder.dart';
 import 'package:hulaki/features/zones/domain/zone.dart';
 import 'package:hulaki/features/zones/presentation/zone_picker_sheet.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
@@ -1001,12 +1003,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<Map<String, dynamic>> _trackLine() async {
-    final points = await ref
-        .read(databaseProvider)
-        .trackSince(
-          ref.read(currentUserIdProvider),
-          DateTime.now().subtract(const Duration(hours: 24)),
-        );
+    final recorder = TrackRecorder(
+      ref.read(databaseProvider),
+      retention: ref.read(trackRetentionProvider),
+    );
+    final points = await recorder.visibleTrack(
+      ownerId: ref.read(currentUserIdProvider),
+      now: DateTime.now(),
+    );
     // A LineString needs 2+ positions; fewer is invalid GeoJSON and crashes
     // the native map.
     if (points.length < 2) return _emptyFeatures();

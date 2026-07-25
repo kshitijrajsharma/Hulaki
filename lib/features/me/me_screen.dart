@@ -17,6 +17,7 @@ import 'package:hulaki/features/settings/background_run_provider.dart';
 import 'package:hulaki/features/settings/language_picker.dart';
 import 'package:hulaki/features/settings/locale_provider.dart';
 import 'package:hulaki/features/settings/privacy_provider.dart';
+import 'package:hulaki/features/settings/track_retention_provider.dart';
 import 'package:hulaki/features/settings/units.dart';
 import 'package:hulaki/features/settings/units_provider.dart';
 import 'package:hulaki/l10n/app_localizations.dart';
@@ -58,6 +59,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
   Future<void> _setBackgroundRun({required bool value}) async {
     await ref.read(backgroundRunProvider.notifier).set(value: value);
+    _saved();
+  }
+
+  Future<void> _setTrackRetention(int days) async {
+    await ref.read(trackRetentionProvider.notifier).setDays(days);
     _saved();
   }
 
@@ -163,6 +169,23 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             anonymous: ref.watch(appearAnonymousProvider),
           ),
           const SizedBox(height: AppSpacing.xl),
+          _SectionLabel(l10n.meSectionAccount),
+          const SizedBox(height: AppSpacing.sm),
+          _SupportRow(
+            icon: Icons.vpn_key_outlined,
+            iconColor: AppColors.ink,
+            trailingIcon: Icons.chevron_right,
+            title: l10n.meBackUp,
+            subtitle:
+                (ref
+                        .read(sharedPreferencesProvider)
+                        .getBool('recovery.backedUp') ??
+                    false)
+                ? l10n.meBackedUp
+                : l10n.meBackUpSubtitle,
+            onTap: () => unawaited(_backUp()),
+          ),
+          const SizedBox(height: AppSpacing.xl),
           _SectionLabel(l10n.meSectionUnits),
           const SizedBox(height: AppSpacing.sm),
           _Card(
@@ -209,6 +232,13 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               ),
               value: ref.watch(backgroundRunProvider),
               onChanged: (value) => unawaited(_setBackgroundRun(value: value)),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _Card(
+            child: _TrackRetentionTile(
+              days: ref.watch(trackRetentionProvider).inDays,
+              onChanged: (days) => unawaited(_setTrackRetention(days)),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -266,20 +296,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           const _ArchivedGroups(),
           const SizedBox(height: AppSpacing.xl),
           _SectionLabel(l10n.meSectionSupport),
-          const SizedBox(height: AppSpacing.sm),
-          _SupportRow(
-            icon: Icons.vpn_key_outlined,
-            iconColor: AppColors.ink,
-            title: l10n.meBackUp,
-            subtitle:
-                (ref
-                        .read(sharedPreferencesProvider)
-                        .getBool('recovery.backedUp') ??
-                    false)
-                ? l10n.meBackedUp
-                : l10n.meBackUpSubtitle,
-            onTap: () => unawaited(_backUp()),
-          ),
           const SizedBox(height: AppSpacing.sm),
           _SupportRow(
             icon: Icons.school_outlined,
@@ -453,6 +469,42 @@ class _UnitsToggle extends StatelessWidget {
           label: l10n.meUnitsImperial,
           selected: units == UnitSystem.imperial,
           onTap: () => onChanged(UnitSystem.imperial),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrackRetentionTile extends StatelessWidget {
+  const _TrackRetentionTile({required this.days, required this.onChanged});
+
+  final int days;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.meTrailHistory, style: const TextStyle(fontSize: 13)),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final choice in trackRetentionDayChoices)
+              _Segment(
+                label: l10n.meTrailDays(choice),
+                selected: choice == days,
+                onTap: () => onChanged(choice),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          l10n.meTrailHistoryHelper,
+          style: Theme.of(context).textTheme.labelSmall,
         ),
       ],
     );
@@ -662,6 +714,7 @@ class _SupportRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.trailingIcon = Icons.open_in_new,
   });
 
   final IconData icon;
@@ -669,6 +722,7 @@ class _SupportRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final IconData trailingIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -697,11 +751,7 @@ class _SupportRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
-              Icons.open_in_new,
-              size: 18,
-              color: AppColors.textMuted,
-            ),
+            Icon(trailingIcon, size: 18, color: AppColors.textMuted),
           ],
         ),
       ),
