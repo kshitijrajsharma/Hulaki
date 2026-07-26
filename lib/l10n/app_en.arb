@@ -872,6 +872,22 @@
   "@discoverFindingLocation": {
     "description": "Shown while waiting for a GPS fix to look up nearby groups"
   },
+  "discoverLocationSlow": "Still finding your location. Check that location is on for Hulaki, or browse global.",
+  "@discoverLocationSlow": {
+    "description": "Shown when a GPS fix is taking too long on the nearby tab"
+  },
+  "discoverOpenSettings": "Open settings",
+  "@discoverOpenSettings": {
+    "description": "Button that opens the device location or app settings"
+  },
+  "discoverBrowseGlobal": "Browse global",
+  "@discoverBrowseGlobal": {
+    "description": "Button that switches from the nearby tab to the global feed"
+  },
+  "discoverTryAgain": "Try again",
+  "@discoverTryAgain": {
+    "description": "Button that retries acquiring the location"
+  },
   "discoverLookingNearby": "Looking nearby…",
   "@discoverLookingNearby": {
     "description": "Shown while the nearby public groups are loading"

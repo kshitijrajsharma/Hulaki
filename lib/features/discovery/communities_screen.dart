@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:hulaki/app/providers.dart';
 import 'package:hulaki/design/app_colors.dart';
 import 'package:hulaki/design/app_spacing.dart';
@@ -164,7 +165,13 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
     UnitSystem units,
   ) {
     if (live == null) {
-      return _Centered(l10n.discoverFindingLocation, spinner: true);
+      return _NearbyLocating(
+        onBrowseGlobal: () => setState(() {
+          _tab = 'global';
+          if (_globalFuture == null) _loadGlobal();
+        }),
+        onRetry: () => ref.invalidate(liveLocationProvider),
+      );
     }
     return RefreshIndicator(
       onRefresh: () async {
@@ -315,6 +322,101 @@ class _NearbyTile extends StatelessWidget {
               const Icon(Icons.chevron_right, color: AppColors.textFaint),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The nearby tab while it has no fix yet. It keeps trying, but always offers a
+/// way out (browse global) and, if a fix is slow to arrive, explains how to fix
+/// location and lets the user retry, so it never spins with no recourse.
+class _NearbyLocating extends StatefulWidget {
+  const _NearbyLocating({required this.onBrowseGlobal, required this.onRetry});
+
+  final VoidCallback onBrowseGlobal;
+  final VoidCallback onRetry;
+
+  @override
+  State<_NearbyLocating> createState() => _NearbyLocatingState();
+}
+
+class _NearbyLocatingState extends State<_NearbyLocating> {
+  static const _slowAfter = Duration(seconds: 10);
+  bool _slow = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer(_slowAfter, () {
+      if (mounted) setState(() => _slow = true);
+    });
+  }
+
+  /// Opens device location settings when the service is off, otherwise the app
+  /// settings where the location permission lives.
+  Future<void> _openSettings() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      await Geolocator.openLocationSettings();
+    } else {
+      await Geolocator.openAppSettings();
+    }
+  }
+
+  void _retry() {
+    widget.onRetry();
+    setState(() => _slow = false);
+    _startTimer();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              _slow ? l10n.discoverLocationSlow : l10n.discoverFindingLocation,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (_slow) ...[
+              TextButton(
+                onPressed: () => unawaited(_openSettings()),
+                child: Text(l10n.discoverOpenSettings),
+              ),
+              TextButton(
+                onPressed: _retry,
+                child: Text(l10n.discoverTryAgain),
+              ),
+            ],
+            TextButton(
+              onPressed: widget.onBrowseGlobal,
+              child: Text(l10n.discoverBrowseGlobal),
+            ),
+          ],
         ),
       ),
     );

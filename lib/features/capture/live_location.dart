@@ -36,21 +36,29 @@ class GeolocatorLiveLocationSource implements LiveLocationSource {
   @override
   Stream<LiveLocation> watch() async* {
     if (!await ensureLocationPermission()) return;
-    // No distance filter, so the reading keeps refreshing while stationary and
-    // its accuracy stays current instead of freezing until the next move.
+    // Show the last known fix at once so the reading appears immediately
+    // instead of waiting for a cold sensor's first live fix.
+    final last = await Geolocator.getLastKnownPosition();
+    if (last != null) yield _reading(last);
+    // High accuracy fixes faster than the default best, and no distance filter
+    // keeps the reading refreshing while stationary so its accuracy stays live.
     await for (final position in Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
     )) {
-      yield LiveLocation(
-        lat: position.latitude,
-        lng: position.longitude,
-        accuracyM: position.accuracy,
-        altitudeM: position.altitude,
-        speedMps: position.speed,
-        headingDeg: position.heading,
-      );
+      yield _reading(position);
     }
   }
+
+  LiveLocation _reading(Position position) => LiveLocation(
+    lat: position.latitude,
+    lng: position.longitude,
+    accuracyM: position.accuracy,
+    altitudeM: position.altitude,
+    speedMps: position.speed,
+    headingDeg: position.heading,
+  );
 }
 
 /// A stand-in that emits one fixed reading, so screens render without device
