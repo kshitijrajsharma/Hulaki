@@ -1,3 +1,9 @@
+## v0.0.27 (2026-07-26)
+
+### Fix
+
+- **gps**: fix gpx get the last known locatoin at first
+
 ## v0.0.26 (2026-07-26)
 
 ### Fix
