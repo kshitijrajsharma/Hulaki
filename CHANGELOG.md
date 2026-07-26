@@ -1,3 +1,10 @@
+## v0.0.26 (2026-07-26)
+
+### Fix
+
+- **chore**: qa
+- **uiux**: add helper taint text
+
 ## v0.0.25 (2026-07-19)
 
 ### Fix
