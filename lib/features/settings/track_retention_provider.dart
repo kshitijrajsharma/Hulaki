@@ -21,9 +21,7 @@ class TrackRetentionNotifier extends Notifier<Duration> {
 
   Future<void> setDays(int days) async {
     state = Duration(days: days);
-    await ref
-        .read(sharedPreferencesProvider)
-        .setInt(_trackRetentionKey, days);
+    await ref.read(sharedPreferencesProvider).setInt(_trackRetentionKey, days);
   }
 }
 

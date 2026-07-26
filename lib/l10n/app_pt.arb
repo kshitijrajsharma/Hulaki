@@ -392,6 +392,8 @@
   "shareWebCopy": "Copiar",
   "shareWebShare": "Compartilhar",
   "shareWebRevoke": "Revogar",
+  "shareWebRevokeTitle": "Revogar este link?",
+  "shareWebRevokeBody": "A página da web para de funcionar para qualquer pessoa que tenha o link. Você pode publicar um novo link depois.",
   "shareWebCopied": "Link copiado",
   "shareWebUpdate": "Atualizar",
   "shareWebUpdateFailed": "Não foi possível atualizar o link",

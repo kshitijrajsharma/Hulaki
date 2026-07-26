@@ -392,6 +392,8 @@
   "shareWebCopy": "نسخ",
   "shareWebShare": "مشاركة",
   "shareWebRevoke": "إلغاء",
+  "shareWebRevokeTitle": "إلغاء هذا الرابط؟",
+  "shareWebRevokeBody": "تتوقف صفحة الويب عن العمل لأي شخص لديه الرابط. يمكنك نشر رابط جديد لاحقًا.",
   "shareWebCopied": "تم نسخ الرابط",
   "shareWebUpdate": "تحديث",
   "shareWebUpdateFailed": "تعذّر تحديث الرابط",

@@ -263,10 +263,36 @@ class _LinkRow extends StatelessWidget {
               color: AppColors.danger,
             ),
             tooltip: l10n.shareWebRevoke,
-            onPressed: onRevoke,
+            onPressed: () => unawaited(_confirmRevoke(context, l10n)),
           ),
         ],
       ),
     );
+  }
+
+  /// Revoking kills a live public link, so confirm before it happens.
+  Future<void> _confirmRevoke(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.shareWebRevokeTitle),
+        content: Text(l10n.shareWebRevokeBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.groupCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: Text(l10n.shareWebRevoke),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) onRevoke();
   }
 }

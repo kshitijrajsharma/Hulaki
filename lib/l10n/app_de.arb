@@ -392,6 +392,8 @@
   "shareWebCopy": "Kopieren",
   "shareWebShare": "Teilen",
   "shareWebRevoke": "Widerrufen",
+  "shareWebRevokeTitle": "Diesen Link widerrufen?",
+  "shareWebRevokeBody": "Die Webseite funktioniert für niemanden mehr, der den Link hat. Du kannst später einen neuen Link veröffentlichen.",
   "shareWebCopied": "Link kopiert",
   "shareWebUpdate": "Aktualisieren",
   "shareWebUpdateFailed": "Link konnte nicht aktualisiert werden",

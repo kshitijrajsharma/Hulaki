@@ -651,6 +651,7 @@ Future<void> _editHotKeys(
         label: row.label,
         colorValue: row.colorValue,
         iconName: row.iconName,
+        description: row.description,
       ),
   ];
   if (!context.mounted) return;
@@ -659,9 +660,25 @@ Future<void> _editHotKeys(
       builder: (_) => HotKeyEditorScreen(initial: initial, editable: editable),
     ),
   );
-  if (result == null) return;
+  if (result == null || _sameHotKeys(initial, result)) return;
   await ref.read(groupServiceProvider).updateHotKeys(groupId, result);
   if (context.mounted) context.showSuccess(l10n.groupQuickTagsUpdated);
+}
+
+/// Whether the edited tag list matches the stored one, so closing the editor
+/// with no change neither rewrites the tags nor claims they were updated.
+bool _sameHotKeys(List<EditableHotKey> a, List<EditableHotKey> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i].id != b[i].id ||
+        a[i].label != b[i].label ||
+        a[i].colorValue != b[i].colorValue ||
+        a[i].iconName != b[i].iconName ||
+        a[i].description != b[i].description) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /// The group's photo, name and description. An admin edits the name and

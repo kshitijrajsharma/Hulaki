@@ -1959,6 +1959,14 @@
   "@shareWebRevoke": {
     "description": "Tooltip for the revoke link action"
   },
+  "shareWebRevokeTitle": "Revoke this link?",
+  "@shareWebRevokeTitle": {
+    "description": "Title of the confirm dialog before revoking a web link"
+  },
+  "shareWebRevokeBody": "The web page stops working for anyone who has it. You can publish a new link later.",
+  "@shareWebRevokeBody": {
+    "description": "Body of the confirm dialog before revoking a web link"
+  },
   "shareWebCopied": "Link copied",
   "@shareWebCopied": {
     "description": "Confirmation shown after copying a web link"

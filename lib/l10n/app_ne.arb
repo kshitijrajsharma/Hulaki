@@ -433,6 +433,8 @@
   "shareWebCopy": "प्रतिलिपि गर्नुहोस्",
   "shareWebShare": "साझा गर्नुहोस्",
   "shareWebRevoke": "रद्द गर्नुहोस्",
+  "shareWebRevokeTitle": "यो लिङ्क रद्द गर्ने?",
+  "shareWebRevokeBody": "लिङ्क भएका जोसुकैका लागि वेब पृष्ठले काम गर्न बन्द गर्छ। तपाईं पछि नयाँ लिङ्क प्रकाशित गर्न सक्नुहुन्छ।",
   "shareWebCopied": "लिङ्क प्रतिलिपि भयो",
   "shareWebUpdate": "अद्यावधिक गर्नुहोस्",
   "shareWebUpdateFailed": "लिङ्क अद्यावधिक गर्न सकिएन",
